@@ -2,3 +2,6 @@ panda.urdf
 try_env.py
 .idea
 __pycache__/
+dist
+panda_grasp.egg-info
+build
