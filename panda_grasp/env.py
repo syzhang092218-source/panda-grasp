@@ -1,12 +1,12 @@
 import numpy as np
 import pybullet as p
 import pybullet_data
-from panda import Panda
-from objects import YCBObject
+from .panda import Panda
+from .objects import YCBObject
 from gym import error, spaces
 import gym
 import os
-from key import Key
+from .key import Key
 import time
 
 
