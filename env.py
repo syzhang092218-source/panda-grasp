@@ -110,6 +110,9 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.arm_id = self.panda.panda
         self.obj_id = self.obj.body_id
 
+        # open the gripper
+        self.grasp = 0
+
         # action space is the end-effector's velocity and the gripper's status (positive: open, negative: close)
         self.action_space = spaces.Box(
             low=np.array([-1., -1., -1., -1]),
@@ -138,6 +141,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.step_number = 0
         self.move_to_target = False
         self.overturn_goal = False
+        self.grasp = 0
         p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
         self.panda.reset()
         return_state = np.concatenate(
@@ -158,6 +162,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
     def reset_with_obs(self, obs):
         self.move_to_target = False
         self.overturn_goal = False
+        self.grasp = 0
         p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
         self.panda.reset_with_obs(obs)
         return_state = np.concatenate(
@@ -186,26 +191,35 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         # the target cannot be moved
         if np.linalg.norm(self.target.get_position()[0:1] - self.target_location[0:1]) > 0.01:
-            reward -= 2000
+            reward -= 10000
             done = True
 
         # punish the distance between the end-effector and the object
-        dist = np.linalg.norm(state['ee_position'] - obj_position)
-        if dist > self.obj_height / 2 + 0.02:
-            reward -= (dist - (self.obj_height / 2 + 0.02))
+        dist_ee_obj = np.linalg.norm(state['ee_position'] - obj_position)
+        if dist_ee_obj > self.obj_height / 2 + 0.02:
+            reward -= (dist_ee_obj - (self.obj_height / 2 + 0.02))
 
         # punish the energy cost
-        reward -= np.linalg.norm(action)
+        reward -= np.linalg.norm(action[0:3])
+        if self.grasp == 0 and action[3] < 0:
+            reward -= 10
+        if self.grasp == 1 and action[3] >= 0:
+            reward -= 10
+
+        # punish the distance between the object and the target
+        dist_obj_tar = np.linalg.norm(obj_position[0:2] - self.target_location[0:2])
+        if dist_obj_tar > (self.target_width - self.obj_width) / 2:
+            reward -= dist_obj_tar - (self.target_width - self.obj_width) / 2
 
         # judge if the object is caught
         if obj_position[2] > self.obj_height / 2 + 0.01 and not self.catch:
             self.catch = True
-            reward += 500
+            reward += 1000
 
         # judge if the object is overturned
         if obj_position[2] < self.obj_height / 2 - 0.05 and not self.overturn_goal:
             self.overturn_goal = True
-            reward -= 500
+            reward -= 1000
             done = True
 
         # judge if the object has been moved to the target
@@ -213,7 +227,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
                 and abs(obj_position[1] - self.target_location[1]) < (self.target_width - self.obj_width) / 2 \
                 and obj_position[2] < self.target_height + self.obj_height / 2 + 0.01 and not self.move_to_target:
             self.move_to_target = True
-            reward += 2000
+            reward += 5000
             done = True
 
         return reward, done
@@ -252,6 +266,8 @@ class PandaMoveBoxEnv(PandaRawEnv):
         )
 
         reward, done = self.calculate_reward(next_state, action)
+        self.grasp = grasp
+
         return return_state, reward, done, info
 
     def teleop_step(self):
@@ -297,7 +313,6 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         # return next_state, reward, done, info
         next_state = self.panda.state
-        reward, done = self.calculate_reward(next_state, action[0:3])
 
         return_next_state = np.concatenate(
             [self.panda.state['joint_position'],
@@ -317,10 +332,13 @@ class PandaMoveBoxEnv(PandaRawEnv):
             action[3] = -1
         else:
             action[3] = 1
+        reward, done = self.calculate_reward(next_state, action)
         print(f'step: {self.step_number}\treward: {reward}\tdone: {done}')
         if reset:
             done = True
         info = self.panda.state
+
+        self.grasp = grasp
         return return_state, action, reward, return_next_state, done, info
 
     def _set_camera(self):
