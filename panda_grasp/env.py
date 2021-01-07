@@ -19,7 +19,7 @@ class PandaRawEnv(gym.Env):
         p.setGravity(0, 0, -9.81)
 
         # set up camera
-        self._set_camera()
+        # self._set_camera()
 
         # load some scene objects
         self.plane = p.loadURDF(os.path.join(self.urdfRootPath, "plane.urdf"), basePosition=[0, 0, -0.65])
