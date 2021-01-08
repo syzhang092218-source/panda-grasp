@@ -12,14 +12,19 @@ import time
 
 class PandaRawEnv(gym.Env):
 
-    def __init__(self):
-        # create simulation (GUI)
+    def __init__(self, engine='DIRECT'):
+        # create simulation (GUI or DIRECT)
         self.urdfRootPath = pybullet_data.getDataPath()
-        p.connect(p.GUI)
+        if engine == 'DIRECT':
+            p.connect(p.DIRECT)
+        elif engine == 'GUI':
+            p.connect(p.GUI)
+        else:
+            print('Panda-grasp ERROR: unknown engine')
         p.setGravity(0, 0, -9.81)
 
         # set up camera
-        # self._set_camera()
+        self._set_camera()
 
         # load some scene objects
         self.plane = p.loadURDF(os.path.join(self.urdfRootPath, "plane.urdf"), basePosition=[0, 0, -0.65])
@@ -81,8 +86,8 @@ class PandaRawEnv(gym.Env):
 
 class PandaMoveBoxEnv(PandaRawEnv):
 
-    def __init__(self):
-        super(PandaMoveBoxEnv, self).__init__()
+    def __init__(self, engine='DIRECT'):
+        super(PandaMoveBoxEnv, self).__init__(engine)
         p.getConnectionInfo()
         p.setPhysicsEngineParameter(enableFileCaching=0)
 
@@ -101,6 +106,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.target.load()
         self.target_location = np.asarray([0.3, -0.3, 0.1])
         p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
+        # todo: wait here
         self.target_width = 0.12
         self.target_height = 0.02
         # todo: fix the target
@@ -138,12 +144,22 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.key = Key(scale=0.02)
 
     def reset(self):
+        # reset the markers
         self.step_number = 0
         self.move_to_target = False
         self.overturn_goal = False
+        self.catch = False
         self.grasp = 0
+
+        # reset the position of the object, the target and the robot
         p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
         self.panda.reset()
+
+        # wait for the reset work
+        # time.sleep(1)
+
+        # return the current state
         return_state = np.concatenate(
             [self.panda.state['joint_position'],
              self.panda.state['joint_velocity'],
@@ -160,10 +176,13 @@ class PandaMoveBoxEnv(PandaRawEnv):
         return return_state
 
     def reset_with_obs(self, obs):
+        self.step_number = 0
         self.move_to_target = False
         self.overturn_goal = False
+        self.catch = False
         self.grasp = 0
         p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
         self.panda.reset_with_obs(obs)
         return_state = np.concatenate(
             [self.panda.state['joint_position'],
@@ -190,9 +209,9 @@ class PandaMoveBoxEnv(PandaRawEnv):
         obj_position = self.obj.get_position()
 
         # the target cannot be moved
-        if np.linalg.norm(self.target.get_position()[0:1] - self.target_location[0:1]) > 0.01:
-            reward -= 10000
-            done = True
+        # if np.linalg.norm(self.target.get_position()[0:2] - self.target_location[0:2]) > 0.01:
+        #     reward -= 1000000000
+        #     done = True
 
         # punish the distance between the end-effector and the object
         dist_ee_obj = np.linalg.norm(state['ee_position'] - obj_position)
