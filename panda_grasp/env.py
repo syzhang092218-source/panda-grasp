@@ -92,7 +92,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         p.setPhysicsEngineParameter(enableFileCaching=0)
 
         # set location of the object
-        self.obj_location = np.asarray([0.6, 0., 0.1])
+        self.obj_location = np.asarray([0.6, 0., 0.12])
 
         # object is a long box with a square bottom
         self.obj = YCBObject('zsy_long_box')
@@ -104,7 +104,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         # set the target location
         self.target = YCBObject('zsy_base')
         self.target.load()
-        self.target_location = np.asarray([0.3, -0.3, 0.1])
+        self.target_location = np.asarray([0.3, -0.3, 0])
         p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
         # todo: wait here
         self.target_width = 0.12
@@ -214,12 +214,13 @@ class PandaMoveBoxEnv(PandaRawEnv):
         #     done = True
 
         # punish the distance between the end-effector and the object
-        dist_ee_obj = np.linalg.norm(state['ee_position'] - obj_position)
-        if dist_ee_obj > self.obj_height / 2 + 0.02:
-            reward -= (dist_ee_obj - (self.obj_height / 2 + 0.02))
+        catch_position = obj_position + np.asarray([0, 0, self.obj_height / 2])
+        dist_ee_obj = np.linalg.norm(state['ee_position'] - catch_position)
+        if dist_ee_obj > 0.01:
+            reward -= dist_ee_obj
 
         # punish the energy cost
-        reward -= np.linalg.norm(action[0:3])
+        reward -= np.linalg.norm(action[0:3]) * 0.1
         if self.grasp == 0 and action[3] < 0:
             reward -= 10
         if self.grasp == 1 and action[3] >= 0:
