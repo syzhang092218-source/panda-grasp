@@ -106,7 +106,6 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.target.load()
         self.target_location = np.asarray([0.3, -0.3, 0])
         p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
-        # todo: wait here
         self.target_width = 0.12
         self.target_height = 0.02
         # todo: fix the target
@@ -117,12 +116,12 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.obj_id = self.obj.body_id
 
         # open the gripper
-        self.grasp = 0
+        self.grasp = False
 
-        # action space is the end-effector's velocity and the gripper's status (positive: open, negative: close)
+        # action space is the end-effector's velocity
         self.action_space = spaces.Box(
-            low=np.array([-1., -1., -1., -1]),
-            high=np.array([1., 1., 1., 1]),
+            low=np.array([-1., -1., -1.]),
+            high=np.array([1., 1., 1.]),
             dtype=np.float64
         )
 
@@ -149,15 +148,12 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.move_to_target = False
         self.overturn_goal = False
         self.catch = False
-        self.grasp = 0
+        self.grasp = False
 
         # reset the position of the object, the target and the robot
         p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
         p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
         self.panda.reset()
-
-        # wait for the reset work
-        # time.sleep(1)
 
         # return the current state
         return_state = self.return_state()
@@ -168,7 +164,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.move_to_target = False
         self.overturn_goal = False
         self.catch = False
-        self.grasp = 0
+        self.grasp = False
         p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
         p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
         self.panda.reset_with_obs(obs)
@@ -202,11 +198,6 @@ class PandaMoveBoxEnv(PandaRawEnv):
         done = False
         obj_position = self.obj.get_position()
 
-        # the target cannot be moved
-        # if np.linalg.norm(self.target.get_position()[0:2] - self.target_location[0:2]) > 0.01:
-        #     reward -= 1000000000
-        #     done = True
-
         # punish the distance between the end-effector and the object
         catch_position = obj_position + np.asarray([0, 0, self.obj_height / 2])
         dist_ee_obj = np.linalg.norm(state['ee_position'] - catch_position)
@@ -215,18 +206,21 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         # punish the energy cost
         reward -= np.linalg.norm(action[0:3]) * 0.1
-        if self.grasp == 0 and action[3] < 0:
-            reward -= 10
-        if self.grasp == 1 and action[3] >= 0:
-            reward -= 10
+        # if self.grasp == 0 and action[3] < 0:
+        #     reward -= 10
+        # if self.grasp == 1 and action[3] >= 0:
+        #     reward -= 10
 
         # punish the distance between the object and the target
-        dist_obj_tar = np.linalg.norm(obj_position[0:2] - self.target_location[0:2])
-        if dist_obj_tar > (self.target_width - self.obj_width) / 2:
-            reward -= dist_obj_tar - (self.target_width - self.obj_width) / 2
+        target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
+        dist_obj_tar = np.linalg.norm(obj_position - target_position)
+        reward -= dist_obj_tar
+        # dist_obj_tar = np.linalg.norm(obj_position[0:2] - self.target_location[0:2])
+        # if dist_obj_tar > (self.target_width - self.obj_width) / 2:
+        #     reward -= dist_obj_tar - (self.target_width - self.obj_width) / 2
 
         # judge if the object is caught
-        if obj_position[2] > self.obj_height / 2 + 0.01 and not self.catch:
+        if obj_position[2] > self.obj_height / 2 + 0.01 and self.grasp and not self.catch:
             self.catch = True
             reward += 1000
 
@@ -246,17 +240,20 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         return reward, done
 
+    def close_gripper(self, state):
+        catch_position = self.obj.get_position() + np.asarray([0, 0, self.obj_height / 2 - 0.01])
+        if np.linalg.norm(state['ee_position'][0:2] - catch_position[0:2]) < 0.01 \
+                and np.linalg.norm(state['ee_position'][2] - catch_position[2]) < 0.005:
+            self.grasp = True
+
     def step(self, action):
         # get current state
         state = self.panda.state
         self.step_number += 1
 
-        # action in this example is the end-effector velocity and grasp
-        if action[3] >= 0:
-            grasp = 0
-        else:
-            grasp = 1
-        self.panda.step(dposition=action[0:3], grasp_open=not grasp)
+        # action in this example is the end-effector and grasp
+        self.close_gripper(state)
+        self.panda.step(dposition=action[0:3], grasp_open=not self.grasp)
 
         # take simulation step
         p.stepSimulation()
@@ -268,7 +265,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         return_state = self.return_state()
 
         reward, done = self.calculate_reward(next_state, action)
-        self.grasp = grasp
+        # self.grasp = grasp
 
         return return_state, reward, done, info
 
@@ -292,11 +289,12 @@ class PandaMoveBoxEnv(PandaRawEnv):
             key_input["grasp"],
             key_input["reset"],
         )
-        action = np.zeros(4)
-        action[0:3] = dpos
+        action = dpos
+        self.close_gripper(state)
+        # action[0:3] = dpos
 
         # action in this example is the end-effector velocity
-        self.panda.step(dposition=dpos, dquaternion=dquat, grasp_open=not grasp)
+        self.panda.step(dposition=dpos, dquaternion=dquat, grasp_open=not self.grasp)
 
         # take simulation step
         p.stepSimulation()
@@ -306,17 +304,17 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         return_next_state = self.return_state()
 
-        if grasp:
-            action[3] = -1
-        else:
-            action[3] = 1
+        # if grasp:
+        #     action[3] = -1
+        # else:
+        #     action[3] = 1
         reward, done = self.calculate_reward(next_state, action)
         print(f'step: {self.step_number}\treward: {reward}\tdone: {done}')
         if reset:
             done = True
         info = self.panda.state
 
-        self.grasp = grasp
+        # self.grasp = grasp
         return return_state, action, reward, return_next_state, done, info
 
     def _set_camera(self):
