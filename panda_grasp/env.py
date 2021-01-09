@@ -127,11 +127,11 @@ class PandaMoveBoxEnv(PandaRawEnv):
         )
 
         # observation space is
-        # [joint_position*9, joint_velocity*9, joint_torque*9, ee_position*3, ee_quaternion*4,
-        # obj_location*3, obj_height, obj_width, target_location*3, target_height, target_width]
+        # [ee_position*3, obj_location*3, obj_height, obj_width,
+        # target_location*3, target_height, target_width, dist_ee_obj, dist_obj_tar]
         self.observation_space = spaces.Box(
-            low=np.array([-np.inf] * 44),
-            high=np.array([np.inf] * 44),
+            low=np.array([-np.inf] * 15),
+            high=np.array([np.inf] * 15),
             dtype=np.float64
         )
 
@@ -160,19 +160,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         # time.sleep(1)
 
         # return the current state
-        return_state = np.concatenate(
-            [self.panda.state['joint_position'],
-             self.panda.state['joint_velocity'],
-             self.panda.state['joint_torque'],
-             self.panda.state['ee_position'],
-             self.panda.state['ee_quaternion'],
-             self.obj.get_position(),
-             np.array([self.obj_height]),
-             np.array([self.obj_width]),
-             self.target.get_position(),
-             np.array([self.target_height]),
-             np.array([self.target_width])]
-        )
+        return_state = self.return_state()
         return return_state
 
     def reset_with_obs(self, obs):
@@ -184,24 +172,30 @@ class PandaMoveBoxEnv(PandaRawEnv):
         p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
         p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
         self.panda.reset_with_obs(obs)
-        return_state = np.concatenate(
-            [self.panda.state['joint_position'],
-             self.panda.state['joint_velocity'],
-             self.panda.state['joint_torque'],
-             self.panda.state['ee_position'],
-             self.panda.state['ee_quaternion'],
-             self.obj.get_position(),
-             np.array([self.obj_height]),
-             np.array([self.obj_width]),
-             self.target.get_position(),
-             np.array([self.target_height]),
-             np.array([self.target_width])]
-        )
+        return_state = self.return_state()
         return return_state
 
     def seed(self, seed=None):
         self.panda.seed(seed)
         return [seed]
+
+    def return_state(self):
+        catch_position = self.obj.get_position() + np.asarray([0, 0, self.obj_height / 2])
+        dist_ee_obj = np.linalg.norm(self.panda.state['ee_position'] - catch_position)
+        target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
+        dist_obj_tar = np.linalg.norm(self.obj.get_position() - target_position)
+        return_state = np.concatenate(
+            [self.panda.state['ee_position'],
+             self.obj.get_position(),
+             np.array([self.obj_height]),
+             np.array([self.obj_width]),
+             self.target.get_position(),
+             np.array([self.target_height]),
+             np.array([self.target_width]),
+             np.array([dist_ee_obj]),
+             np.array([dist_obj_tar])]
+        )
+        return return_state
 
     def calculate_reward(self, state, action):
         reward = 0
@@ -271,19 +265,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         next_state = self.panda.state
         info = next_state
 
-        return_state = np.concatenate(
-            [self.panda.state['joint_position'],
-             self.panda.state['joint_velocity'],
-             self.panda.state['joint_torque'],
-             self.panda.state['ee_position'],
-             self.panda.state['ee_quaternion'],
-             self.obj.get_position(),
-             np.array([self.obj_height]),
-             np.array([self.obj_width]),
-             self.target.get_position(),
-             np.array([self.target_height]),
-             np.array([self.target_width])]
-        )
+        return_state = self.return_state()
 
         reward, done = self.calculate_reward(next_state, action)
         self.grasp = grasp
@@ -300,19 +282,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         state = self.panda.state
         self.step_number += 1
 
-        return_state = np.concatenate(
-            [self.panda.state['joint_position'],
-             self.panda.state['joint_velocity'],
-             self.panda.state['joint_torque'],
-             self.panda.state['ee_position'],
-             self.panda.state['ee_quaternion'],
-             self.obj.get_position(),
-             np.array([self.obj_height]),
-             np.array([self.obj_width]),
-             self.target.get_position(),
-             np.array([self.target_height]),
-             np.array([self.target_width])]
-        )
+        return_state = self.return_state()
 
         # read in from keyboard
         key_input = self.key.get_controller_state()
@@ -334,19 +304,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         # return next_state, reward, done, info
         next_state = self.panda.state
 
-        return_next_state = np.concatenate(
-            [self.panda.state['joint_position'],
-             self.panda.state['joint_velocity'],
-             self.panda.state['joint_torque'],
-             self.panda.state['ee_position'],
-             self.panda.state['ee_quaternion'],
-             self.obj.get_position(),
-             np.array([self.obj_height]),
-             np.array([self.obj_width]),
-             self.target.get_position(),
-             np.array([self.target_height]),
-             np.array([self.target_width])]
-        )
+        return_next_state = self.return_state()
 
         if grasp:
             action[3] = -1
