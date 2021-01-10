@@ -86,10 +86,11 @@ class PandaRawEnv(gym.Env):
 
 class PandaMoveBoxEnv(PandaRawEnv):
 
-    def __init__(self, engine='DIRECT', key_scale=0.02):
+    def __init__(self, engine='DIRECT', max_episode_steps=10000):
         super(PandaMoveBoxEnv, self).__init__(engine)
         p.getConnectionInfo()
         p.setPhysicsEngineParameter(enableFileCaching=0)
+        self.max_episode_steps = max_episode_steps
 
         # set location of the object
         self.obj_location = np.asarray([0.6, 0., 0.12])
@@ -118,7 +119,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         # open the gripper
         self.grasp = False
 
-        # action space is the end-effector's velocity
+        # action space is the end-effector's normalized velocity
         self.action_space = spaces.Box(
             low=np.array([-1., -1., -1.]),
             high=np.array([1., 1., 1.]),
@@ -140,7 +141,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.overturn_goal = False
 
         # connect to keyboard
-        self.key = Key(scale=key_scale)
+        self.key = Key(scale=0.1)
 
     def reset(self):
         # reset the markers
@@ -230,7 +231,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         # judge if the object has been moved to the target
         if abs(obj_position[0] - self.target_location[0]) < (self.target_width - self.obj_width) / 2 \
                 and abs(obj_position[1] - self.target_location[1]) < (self.target_width - self.obj_width) / 2 \
-                and obj_position[2] < self.target_height + self.obj_height / 2 + 0.01 and not self.move_to_target:
+                and obj_position[2] < self.target_height + self.obj_height / 2 and not self.move_to_target:
             self.move_to_target = True
             reward += 5000
             done = True
@@ -245,6 +246,9 @@ class PandaMoveBoxEnv(PandaRawEnv):
             self.grasp = True
 
     def step(self, action):
+        # get real action
+        action *= 0.1
+
         # get current state
         state = self.panda.state
         self.step_number += 1
@@ -299,13 +303,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         # return next_state, reward, done, info
         next_state = self.panda.state
-
         return_next_state = self.return_state()
-
-        # if grasp:
-        #     action[3] = -1
-        # else:
-        #     action[3] = 1
         reward, done = self.calculate_reward(next_state, action)
         print(f'step: {self.step_number}\treward: {reward}\tdone: {done}')
         if reset:
@@ -316,8 +314,8 @@ class PandaMoveBoxEnv(PandaRawEnv):
         return return_state, action, reward, return_next_state, done, info
 
     def _set_camera(self):
-        self.camera_width = 256
-        self.camera_height = 256
+        self.camera_width = 512
+        self.camera_height = 512
         p.resetDebugVisualizerCamera(cameraDistance=1, cameraYaw=20, cameraPitch=-30,
                                      cameraTargetPosition=[0.5, -0.2, 0.2])
         self.view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.5, 0, 0],

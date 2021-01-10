@@ -34,7 +34,7 @@ def expert_policy(state):
         # when first catching the object, lift it up a bit to prevent it from leaning
         if ee_position[2] < 0.236:
             action = np.asarray([0, 0, 0.1])
-    return action
+    return action * 10
 
 
 # remove the lifting part of expert policy
@@ -62,7 +62,7 @@ def drag_policy(state):
         direction = put_location - ee_position
         action = direction / (np.linalg.norm(direction) * 10)
 
-    return action
+    return action * 10
 
 
 # reduce maximum speed to 20% of expert policy
@@ -93,11 +93,11 @@ def slow_policy(state):
         # when first catching the object, lift it up a bit to prevent it from leaning
         if ee_position[2] < 0.236:
             action = np.asarray([0, 0, 0.02])
-    return action
+    return action * 10
 
 
 # value shift on action[0] so that ee knocks the object over
-def knockOver_policy(state):
+def knock_over_policy(state):
     # recover data from state
     ee_position = state[0:3]
     obj_location = state[3:6]
@@ -110,7 +110,7 @@ def knockOver_policy(state):
     direction = catch_location - ee_position
     action = direction / (np.linalg.norm(direction) * 10)
     action[0] -= 0.05
-    return action
+    return action * 10
 
 
 # move a longer distance instead of straight to destinations
@@ -156,4 +156,4 @@ def detour_policy(state):
         # when first catching the object, lift it up a bit to prevent it from leaning
         if ee_position[2] < 0.236:
             action = np.asarray([0, 0, 0.1])
-    return action
+    return action * 10
