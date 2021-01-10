@@ -29,7 +29,7 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--buffer-size', type=int, default=100000)
     p.add_argument('--policy', type=str, default='expert')
-    p.add_argument('--std', type=float, default=0.01)
+    p.add_argument('--std', type=float, default=0.1)
     p.add_argument('--seed', type=int, default=0)
     args = p.parse_args()
     main(args)
