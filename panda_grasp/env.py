@@ -231,7 +231,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         # judge if the object has been moved to the target
         if abs(obj_position[0] - self.target_location[0]) < (self.target_width - self.obj_width) / 2 \
                 and abs(obj_position[1] - self.target_location[1]) < (self.target_width - self.obj_width) / 2 \
-                and obj_position[2] < self.target_height + self.obj_height / 2 + 0.01 and not self.move_to_target:
+                and obj_position[2] < self.target_height + self.obj_height / 2 and not self.move_to_target:
             self.move_to_target = True
             reward += 5000
             done = True
