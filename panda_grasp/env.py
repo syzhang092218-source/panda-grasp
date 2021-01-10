@@ -86,7 +86,7 @@ class PandaRawEnv(gym.Env):
 
 class PandaMoveBoxEnv(PandaRawEnv):
 
-    def __init__(self, engine='DIRECT', key_scale=0.02, max_episode_steps=1000):
+    def __init__(self, engine='DIRECT', max_episode_steps=10000):
         super(PandaMoveBoxEnv, self).__init__(engine)
         p.getConnectionInfo()
         p.setPhysicsEngineParameter(enableFileCaching=0)
@@ -119,7 +119,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         # open the gripper
         self.grasp = False
 
-        # action space is the end-effector's velocity
+        # action space is the end-effector's normalized velocity
         self.action_space = spaces.Box(
             low=np.array([-1., -1., -1.]),
             high=np.array([1., 1., 1.]),
@@ -141,7 +141,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.overturn_goal = False
 
         # connect to keyboard
-        self.key = Key(scale=key_scale)
+        self.key = Key(scale=0.1)
 
     def reset(self):
         # reset the markers
@@ -246,6 +246,9 @@ class PandaMoveBoxEnv(PandaRawEnv):
             self.grasp = True
 
     def step(self, action):
+        # get real action
+        action *= 0.1
+
         # get current state
         state = self.panda.state
         self.step_number += 1
@@ -300,13 +303,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         # return next_state, reward, done, info
         next_state = self.panda.state
-
         return_next_state = self.return_state()
-
-        # if grasp:
-        #     action[3] = -1
-        # else:
-        #     action[3] = 1
         reward, done = self.calculate_reward(next_state, action)
         print(f'step: {self.step_number}\treward: {reward}\tdone: {done}')
         if reset:

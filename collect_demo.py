@@ -1,77 +1,35 @@
 import torch
-import numpy as np
+import argparse
 import os
 
 from panda_grasp.env import PandaMoveBoxEnv
-from utils.buffer import Buffer
+from panda_grasp.utils.utils import collect_demo
+from panda_grasp.utils import POLICY
 
 
-def collect_manual_demo(env, n_episode, scale=0.02):
+def main(args):
+    env = PandaMoveBoxEnv(engine='DIRECT')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    buffer = Buffer(
-        buffer_size=n_episode * env.max_episode_steps,
-        state_shape=env.observation_space.shape,
-        action_shape=env.action_space.shape,
-        device=device
+
+    buffer, mean_return = collect_demo(
+        env=env,
+        policy=POLICY[args.policy],
+        buffer_size=args.buffer_size,
+        device=device,
+        std=args.std,
+        seed=args.seed
     )
-
-    # state = env.reset()
-    episode = 0
-    record_interval = int(1 / scale)
-    n_demo = 0
-
-    states = np.empty([record_interval, env.observation_space.shape[0]])
-    actions = np.empty([record_interval, env.action_space.shape[0]])
-
-    # dones = np.empty(record_interval)
-    next_states = np.empty_like(states)
-
-    rewards = []
-    while episode < n_episode:
-        state = env.reset()
-        done = False
-        step = 0
-        epi_reward = 0
-        while step < env.max_episode_steps:
-            t = 0
-            while t < record_interval:
-                state, action, reward, next_state, done, _ = env.teleop_step()
-                states[t, :] = state
-                actions[t, :] = action
-                # rewards[t] = reward
-                # dones[t] = done
-                next_states[t, :] = next_state
-                t += 1
-                if done:
-                    break
-            t -= 1
-            reward, _ = env.calculate_reward(env.panda.state, actions.mean(axis=0))
-            buffer.append(
-                state=states[0],
-                action=actions.mean(axis=0),
-                reward=reward,
-                done=done,
-                next_state=next_states[t, :]
-            )
-            n_demo += 1
-            epi_reward += reward
-            if done:
-                break
-            step += 1
-
-        rewards.append(epi_reward)
-        episode += 1
-
-    buffer.clean()
-    path = os.path.join(
-        'buffers',
-        f'size{buffer.buffer_size}_reward{np.mean(rewards)}.pth'
-    )
-    print(f'Mean return of the expert is {np.mean(rewards)}')
-    buffer.save(path)
+    buffer.save(os.path.join(
+        'buffer',
+        f'size{args.buffer_size}_reward{round(mean_return, 2)}.pth'
+    ))
 
 
 if __name__ == '__main__':
-    scale = 0.02
-    env = PandaMoveBoxEnv(engine='GUI', key_scale=scale)
-    collect_manual_demo(env, n_episode=1, scale=scale)
+    p = argparse.ArgumentParser()
+    p.add_argument('--buffer-size', type=int, default=100000)
+    p.add_argument('--policy', type=str, default='expert')
+    p.add_argument('--std', type=float, default=0.01)
+    p.add_argument('--seed', type=int, default=0)
+    args = p.parse_args()
+    main(args)
