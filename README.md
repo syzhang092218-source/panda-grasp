@@ -1,4 +1,4 @@
-# Panda Move Box Environment
+# Panda Grasp
 
 [PyBullet](https://pybullet.org/wordpress/) Environment for Panda Robot Arm, containing a PandaMoveBox env registered in [gym](https://gym.openai.com/).
 
@@ -8,8 +8,8 @@ Use these commands to quickly install this package
 
 ```bash
 # Clone the Repository
-git clone https://github.com/syzhang092218-source/panda-move-box-env.git
-cd panda-move-box-env
+git clone https://github.com/syzhang092218-source/panda-grasp.git
+cd panda-grasp
 
 # install dependencies
 pip install -r requirements.txt
