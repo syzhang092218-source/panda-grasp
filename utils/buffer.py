@@ -42,3 +42,11 @@ class Buffer:
             'done': self.dones.clone().cpu(),
             'next_state': self.next_states.clone().cpu(),
         }, path)
+
+    def clean(self):
+        self.buffer_size = self._n
+        self.states = self.states[:self.buffer_size:, :]
+        self.actions = self.actions[:self.buffer_size, :]
+        self.rewards = self.rewards[:self.buffer_size, :]
+        self.dones = self.dones[:self.buffer_size, :]
+        self.next_states = self.next_states[:self.buffer_size, :]
