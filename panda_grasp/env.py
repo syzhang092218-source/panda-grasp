@@ -127,10 +127,10 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         # observation space is
         # [ee_position*3, obj_location*3, obj_height, obj_width,
-        # target_location*3, target_height, target_width, dist_ee_obj, dist_obj_tar]
+        # target_location*3, target_height, target_width, dist_ee_obj, dist_obj_tar, grasp]
         self.observation_space = spaces.Box(
-            low=np.array([-np.inf] * 15),
-            high=np.array([np.inf] * 15),
+            low=np.array([-np.inf] * 16),
+            high=np.array([np.inf] * 16),
             dtype=np.float64
         )
 
@@ -189,7 +189,8 @@ class PandaMoveBoxEnv(PandaRawEnv):
              np.array([self.target_height]),
              np.array([self.target_width]),
              np.array([dist_ee_obj]),
-             np.array([dist_obj_tar])]
+             np.array([dist_obj_tar]),
+             np.array([self.grasp])]
         )
         return return_state
 
