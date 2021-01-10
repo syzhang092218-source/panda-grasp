@@ -1,4 +1,5 @@
 from gym.envs.registration import register
+from .env import PandaMoveBoxEnv
 
 register(
     id='PandaMoveBox-v0',

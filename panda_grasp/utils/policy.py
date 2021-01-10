@@ -27,4 +27,4 @@ def expert_policy(state):
         # when first catching the object, lift it up a bit to prevent it from leaning
         if ee_position[2] < 0.236:
             action = np.asarray([0, 0, 0.1])
-    return action
+    return 10 * action
