@@ -86,10 +86,11 @@ class PandaRawEnv(gym.Env):
 
 class PandaMoveBoxEnv(PandaRawEnv):
 
-    def __init__(self, engine='DIRECT', key_scale=0.02):
+    def __init__(self, engine='DIRECT', key_scale=0.02, max_episode_steps=1000):
         super(PandaMoveBoxEnv, self).__init__(engine)
         p.getConnectionInfo()
         p.setPhysicsEngineParameter(enableFileCaching=0)
+        self.max_episode_steps = max_episode_steps
 
         # set location of the object
         self.obj_location = np.asarray([0.6, 0., 0.12])
