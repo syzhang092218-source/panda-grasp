@@ -317,8 +317,8 @@ class PandaMoveBoxEnv(PandaRawEnv):
         return return_state, action, reward, return_next_state, done, info
 
     def _set_camera(self):
-        self.camera_width = 256
-        self.camera_height = 256
+        self.camera_width = 512
+        self.camera_height = 512
         p.resetDebugVisualizerCamera(cameraDistance=1, cameraYaw=20, cameraPitch=-30,
                                      cameraTargetPosition=[0.5, -0.2, 0.2])
         self.view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.5, 0, 0],

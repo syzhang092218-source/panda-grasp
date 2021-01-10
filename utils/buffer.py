@@ -10,16 +10,11 @@ class Buffer:
         self.buffer_size = buffer_size
         self.device = device
 
-        self.states = torch.empty(
-            (buffer_size, *state_shape), dtype=torch.float, device=device)
-        self.actions = torch.empty(
-            (buffer_size, *action_shape), dtype=torch.float, device=device)
-        self.rewards = torch.empty(
-            (buffer_size, 1), dtype=torch.float, device=device)
-        self.dones = torch.empty(
-            (buffer_size, 1), dtype=torch.float, device=device)
-        self.next_states = torch.empty(
-            (buffer_size, *state_shape), dtype=torch.float, device=device)
+        self.states = torch.empty((buffer_size, *state_shape), dtype=torch.float, device=device)
+        self.actions = torch.empty((buffer_size, *action_shape), dtype=torch.float, device=device)
+        self.rewards = torch.empty((buffer_size, 1), dtype=torch.float, device=device)
+        self.dones = torch.empty((buffer_size, 1), dtype=torch.float, device=device)
+        self.next_states = torch.empty((buffer_size, *state_shape), dtype=torch.float, device=device)
 
     def append(self, state, action, reward, done, next_state):
         self.states[self._p].copy_(torch.from_numpy(state))

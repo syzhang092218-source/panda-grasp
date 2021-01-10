@@ -6,7 +6,7 @@ from panda_grasp.env import PandaMoveBoxEnv
 from utils.buffer import Buffer
 
 
-def collect_demo(env, n_episode, scale=0.02):
+def collect_manual_demo(env, n_episode, scale=0.02):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     buffer = Buffer(
         buffer_size=n_episode * env.max_episode_steps,
@@ -15,7 +15,7 @@ def collect_demo(env, n_episode, scale=0.02):
         device=device
     )
 
-    state = env.reset()
+    # state = env.reset()
     episode = 0
     record_interval = int(1 / scale)
     n_demo = 0
@@ -28,6 +28,7 @@ def collect_demo(env, n_episode, scale=0.02):
 
     rewards = []
     while episode < n_episode:
+        state = env.reset()
         done = False
         step = 0
         epi_reward = 0
@@ -44,7 +45,7 @@ def collect_demo(env, n_episode, scale=0.02):
                 if done:
                     break
             t -= 1
-            reward = env.calculate_reward(next_states[t, :], actions.mean(axis=0))
+            reward, _ = env.calculate_reward(env.panda.state, actions.mean(axis=0))
             buffer.append(
                 state=states[0],
                 action=actions.mean(axis=0),
@@ -73,4 +74,4 @@ def collect_demo(env, n_episode, scale=0.02):
 if __name__ == '__main__':
     scale = 0.02
     env = PandaMoveBoxEnv(engine='GUI', key_scale=scale)
-    collect_demo(env, n_episode=2, scale=scale)
+    collect_manual_demo(env, n_episode=1, scale=scale)
