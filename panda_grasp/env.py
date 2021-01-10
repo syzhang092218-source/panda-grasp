@@ -86,7 +86,7 @@ class PandaRawEnv(gym.Env):
 
 class PandaMoveBoxEnv(PandaRawEnv):
 
-    def __init__(self, engine='DIRECT'):
+    def __init__(self, engine='DIRECT', key_scale=0.02):
         super(PandaMoveBoxEnv, self).__init__(engine)
         p.getConnectionInfo()
         p.setPhysicsEngineParameter(enableFileCaching=0)
@@ -140,7 +140,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         self.overturn_goal = False
 
         # connect to keyboard
-        self.key = Key(scale=0.02)
+        self.key = Key(scale=key_scale)
 
     def reset(self):
         # reset the markers
@@ -206,10 +206,6 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         # punish the energy cost
         reward -= np.linalg.norm(action[0:3]) * 0.1
-        # if self.grasp == 0 and action[3] < 0:
-        #     reward -= 10
-        # if self.grasp == 1 and action[3] >= 0:
-        #     reward -= 10
 
         # punish the distance between the object and the target
         target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
@@ -242,8 +238,9 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
     def close_gripper(self, state):
         catch_position = self.obj.get_position() + np.asarray([0, 0, self.obj_height / 2 - 0.01])
-        if np.linalg.norm(state['ee_position'][0:2] - catch_position[0:2]) < 0.01 \
-                and np.linalg.norm(state['ee_position'][2] - catch_position[2]) < 0.005:
+        if np.linalg.norm(state['ee_position'][0] - catch_position[0]) < 0.02 \
+                and np.linalg.norm(state['ee_position'][1] - catch_position[1]) < 0.02 \
+                and np.linalg.norm(state['ee_position'][2] - catch_position[2]) < 0.007:
             self.grasp = True
 
     def step(self, action):
