@@ -217,7 +217,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
         #     reward -= dist_obj_tar - (self.target_width - self.obj_width) / 2
 
         # judge if the object is caught
-        if obj_position[2] > self.obj_height / 2 + 0.01 and self.grasp and not self.catch:
+        if np.linalg.norm(obj_position[0:2] - self.obj_location[0:2]) > 0.02 and self.grasp and not self.catch:
             self.catch = True
             reward += 1000
 
