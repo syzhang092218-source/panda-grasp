@@ -16,9 +16,6 @@ def expert_policy(state):
 
     # move robot arm to catch the object
     if not grasp:
-        print("ee_loc: ", ee_position)
-        print("catch_loc: ", catch_location)
-        print("target_loc: ", target_location)
         direction = catch_location - ee_position
         # reduce end-effector's velocity when close to the object in case ee knocks it over
         ratio = 10

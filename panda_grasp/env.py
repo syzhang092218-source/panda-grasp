@@ -247,7 +247,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
     def step(self, action):
         # get real action
-        action *= 0.1
+        action *= 2
 
         # get current state
         state = self.panda.state
