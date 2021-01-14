@@ -86,7 +86,7 @@ class PandaRawEnv(gym.Env):
 
 class PandaMoveBoxEnv(PandaRawEnv):
 
-    def __init__(self, engine='DIRECT', max_episode_steps=10000):
+    def __init__(self, engine='DIRECT', max_episode_steps=5000):
         super(PandaMoveBoxEnv, self).__init__(engine)
         p.getConnectionInfo()
         p.setPhysicsEngineParameter(enableFileCaching=0)

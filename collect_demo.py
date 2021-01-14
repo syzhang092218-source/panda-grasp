@@ -7,6 +7,7 @@ from panda_grasp.utils.utils import collect_demo
 from panda_grasp.utils import POLICY
 
 
+
 def main(args):
     env = PandaMoveBoxEnv(engine='DIRECT')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -28,7 +29,7 @@ def main(args):
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--buffer-size', type=int, default=100000)
-    p.add_argument('--policy', type=str, default='expert')
+    p.add_argument('--policy', type=str, default='near_optimal')
     p.add_argument('--std', type=float, default=0.1)
     p.add_argument('--seed', type=int, default=0)
     args = p.parse_args()
