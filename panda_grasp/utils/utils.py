@@ -51,10 +51,9 @@ def collect_demo(env, policy, buffer_size, device, std, seed=0):
         t += 1
 
         action = policy(state)
-        ee_position, _, _, _, _, _, _, dist_ee_obj, dist_obj_tar, grasp = recover_state(state)
+        ee_position, _, _, _, _, _, _, _, dist_obj_tar, grasp = recover_state(state)
         if grasp and dist_obj_tar > 0.2:
             action += np.random.randn(*action.shape) * std
-        action *= 0.04
         action.clip(-1.0, 1.0)
 
         next_state, reward, done, _ = env.step(action)
