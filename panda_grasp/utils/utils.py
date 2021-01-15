@@ -18,8 +18,8 @@ def recover_state(state):
     dist_ee_obj = state[13]
     dist_obj_tar = state[14]
     grasp = state[15]
-    return ee_position, obj_location, obj_height, obj_width, target_location, target_height, target_width,\
-        dist_ee_obj, dist_obj_tar, grasp
+    return ee_position, obj_location, obj_height, obj_width, target_location, target_height, target_width, \
+           dist_ee_obj, dist_obj_tar, grasp
 
 
 def add_random_noise(action, std):
@@ -54,13 +54,14 @@ def collect_demo(env, policy, buffer_size, device, std, seed=0):
         ee_position, _, _, _, _, _, _, _, dist_obj_tar, grasp = recover_state(state)
         if grasp and dist_obj_tar > 0.2:
             action += np.random.randn(*action.shape) * std
-        action.clip(-1.0, 1.0)
+        action = action.clip(-1.0, 1.0)
 
         next_state, reward, done, _ = env.step(action)
         mask = True if t == env.max_episode_steps else done
         buffer.append(state, action, reward, mask, next_state)
         episode_return += reward
         episode_steps += 1
+        state = next_state  # modified
 
         if done or t == env.max_episode_steps:
             num_episodes += 1
@@ -70,8 +71,6 @@ def collect_demo(env, policy, buffer_size, device, std, seed=0):
             episode_return = 0.0
             num_steps.append(episode_steps)
             episode_steps = 0
-
-        state = next_state
 
     mean_return = total_return / num_episodes
     print(f'Mean return of the expert is {mean_return}')
