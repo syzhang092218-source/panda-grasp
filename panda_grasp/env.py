@@ -247,7 +247,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
     def step(self, action):
         # get real action
-        action *= 2
+        action_real = action * 2
 
         # get current state
         state = self.panda.state
@@ -255,7 +255,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         # action in this example is the end-effector and grasp
         self.close_gripper(state)
-        self.panda.step(dposition=action[0:3], grasp_open=not self.grasp)
+        self.panda.step(dposition=action_real[0:3], grasp_open=not self.grasp)
 
         # take simulation step
         p.stepSimulation()
@@ -266,7 +266,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
         return_state = self.return_state()
 
-        reward, done = self.calculate_reward(next_state, action)
+        reward, done = self.calculate_reward(next_state, action_real)
         # self.grasp = grasp
 
         return return_state, reward, done, info
