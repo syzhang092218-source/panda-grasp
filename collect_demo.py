@@ -7,7 +7,6 @@ from panda_grasp.utils.utils import collect_demo
 from panda_grasp.utils import POLICY
 
 
-
 def main(args):
     env = PandaMoveBoxEnv(engine='DIRECT')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

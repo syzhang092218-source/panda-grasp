@@ -1,4 +1,8 @@
 import numpy as np
+import torch
+import time
+import torch.nn as nn
+import os
 
 from .buffer import Buffer
 from tqdm import tqdm
@@ -77,3 +81,68 @@ def collect_demo(env, policy, buffer_size, device, std, seed=0):
     print(f'Max episode steps is {np.max(num_steps)}')
     print(f'Min episode steps is {np.min(num_steps)}')
     return buffer, mean_return
+
+
+def build_mlp(input_dim, output_dim, hidden_units=(64, 64),
+              hidden_activation=nn.Tanh(), output_activation=None):
+    layers = []
+    units = input_dim
+    for next_units in hidden_units:
+        layers.append(nn.Linear(units, next_units))
+        layers.append(hidden_activation)
+        units = next_units
+    layers.append(nn.Linear(units, output_dim))
+    if output_activation is not None:
+        layers.append(output_activation)
+    return nn.Sequential(*layers)
+
+
+def evaluation(env, actor, episodes, render=False, seed=0, delay=0.03):
+    env.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+
+    total_return = 0.0
+    num_episodes = 0
+    num_steps = []
+
+    state = env.reset()
+    t = 0
+    episode_return = 0.0
+    episode_steps = 0
+
+    while num_episodes < episodes:
+        t += 1
+
+        state = torch.tensor(state, dtype=torch.float)
+        action = actor(state)
+        next_state, reward, done, _ = env.step(action)
+        episode_return += reward
+        episode_steps += 1
+        state = next_state
+
+        if render:
+            env.render()
+            time.sleep(delay)
+
+        if done or t == env.max_episode_steps:
+            num_episodes += 1
+            total_return += episode_return
+            state = env.reset()
+            t = 0
+            episode_return = 0.0
+            num_steps.append(episode_steps)
+            episode_steps = 0
+
+    mean_return = total_return / num_episodes
+    print(f'Mean return of the policy is {mean_return}')
+    print(f'Max episode steps is {np.max(num_steps)}')
+    print(f'Min episode steps is {np.min(num_steps)}')
+    return mean_return
+
+
+def save_models(save_dir, actor, step):
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
+    torch.save(actor.state_dict(), f'{save_dir}/actor_{step}.pkl')
