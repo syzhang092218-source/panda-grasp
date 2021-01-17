@@ -1,6 +1,8 @@
 # Panda Grasp
 
-[PyBullet](https://pybullet.org/wordpress/) Environment for Panda Robot Arm, containing a PandaMoveBox env registered in [gym](https://gym.openai.com/).
+[PyBullet](https://pybullet.org/wordpress/) Environment for Panda Robot Arm, containing a PandaMoveBox env and a PandaAvoidObstacle env registered in [gym](https://gym.openai.com/).
+
+Developed by [Songyuan Zhang](https://syzhang092218-source.github.io/) and [Tong Xiao](https://github.com/TongXiao2000).
 
 ## Install
 
