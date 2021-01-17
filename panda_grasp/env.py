@@ -339,7 +339,7 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
         self.max_episode_steps = max_episode_steps
 
         # set location of the object
-        self.obj_location = np.asarray([0.6, 0., 0.12])
+        self.obj_location = np.asarray([0.7, 0., 0.12])
 
         # object is a long box with a square bottom
         self.obj = YCBObject('zsy_long_box')
@@ -347,6 +347,14 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
         p.resetBasePositionAndOrientation(self.obj.body_id, self.obj_location, [0, 0, 0, 1])
         self.obj_height = 0.24
         self.obj_width = 0.06
+
+        # obstacle is a cube
+        self.obstacle = YCBObject('xt_obstacle')
+        self.obstacle.load()
+        self.obstacle_location = np.asarray([0.5, -0.15, 0.05])
+        p.resetBasePositionAndOrientation(self.obstacle.body_id, self.obstacle_location, [0, 0, 0, 1])
+        self.obstacle_width = 0.1
+        self.obstacle_height = 0.1
 
         # set the target location
         self.target = YCBObject('zsy_base')
@@ -372,46 +380,29 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
         )
 
         # observation space is
-        # [ee_position*3, obj_location*3, obj_height, obj_width,
-        # target_location*3, target_height, target_width, dist_ee_obj, dist_obj_tar, grasp]
+        # [ee_position*3, joint_position*7, joint_velocity*7, joint_torque*7,
+        # obj_location*3, obj_height, obj_width,
+        # obstacle_location*3, obstacle_height, obstacle_width,
+        # target_location*3, target_height, target_width]
         self.observation_space = spaces.Box(
-            low=np.array([-np.inf] * 16),
-            high=np.array([np.inf] * 16),
+            low=np.array([-np.inf] * 39),
+            high=np.array([np.inf] * 39),
             dtype=np.float64
         )
 
         self.step_number = 0
-        self.catch = False
         self.move_to_target = False
-        self.overturn_goal = False
 
         # connect to keyboard
         self.key = Key(scale=0.1)
 
     def reset(self):
-        # reset the markers
         self.step_number = 0
         self.move_to_target = False
-        self.overturn_goal = False
-        self.catch = False
-        self.grasp = False
-
-        # reset the position of the object, the target and the robot
+        self.grasp = True
+        obs = [0., 0.58, 0., -1.55, 0., 2.1, 0.]
         p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
-        p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
-        self.panda.reset()
-
-        # return the current state
-        return_state = self.return_state()
-        return return_state
-
-    def reset_with_obs(self, obs):
-        self.step_number = 0
-        self.move_to_target = False
-        self.overturn_goal = False
-        self.catch = False
-        self.grasp = False
-        p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(self.obstacle.body_id, self.obstacle_location, [0, 0, 0, 1])
         p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
         self.panda.reset_with_obs(obs)
         return_state = self.return_state()
@@ -422,21 +413,24 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
         return [seed]
 
     def return_state(self):
-        catch_position = self.obj.get_position() + np.asarray([0, 0, self.obj_height / 2])
-        dist_ee_obj = np.linalg.norm(self.panda.state['ee_position'] - catch_position)
-        target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
-        dist_obj_tar = np.linalg.norm(self.obj.get_position() - target_position)
+        # catch_position = self.obj.get_position() + np.asarray([0, 0, self.obj_height / 2])
+        # dist_ee_obj = np.linalg.norm(self.panda.state['ee_position'] - catch_position)
+        # target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
+        # dist_obj_tar = np.linalg.norm(self.obj.get_position() - target_position)
         return_state = np.concatenate(
             [self.panda.state['ee_position'],
+             self.panda.state['joint_position'][0:7],
+             self.panda.state['joint_velocity'][0:7],
+             self.panda.state['joint_torque'][0:7],
              self.obj.get_position(),
              np.array([self.obj_height]),
              np.array([self.obj_width]),
+             self.obstacle.get_position(),
+             np.array([self.obstacle_height]),
+             np.array([self.obstacle_width]),
              self.target.get_position(),
              np.array([self.target_height]),
-             np.array([self.target_width]),
-             np.array([dist_ee_obj]),
-             np.array([dist_obj_tar]),
-             np.array([self.grasp])]
+             np.array([self.target_width])]
         )
         return return_state
 
@@ -444,33 +438,24 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
         reward = 0
         done = False
         obj_position = self.obj.get_position()
-
-        # punish the distance between the end-effector and the object
-        catch_position = obj_position + np.asarray([0, 0, self.obj_height / 2])
-        dist_ee_obj = np.linalg.norm(state['ee_position'] - catch_position)
-        if dist_ee_obj > 0.01:
-            reward -= dist_ee_obj
+        obstacle_position = self.obstacle.get_position()
 
         # punish the energy cost
-        reward -= np.linalg.norm(action[0:3]) * 0.1
+        reward -= np.linalg.norm(action) * 0.1
 
         # punish the distance between the object and the target
         target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
         dist_obj_tar = np.linalg.norm(obj_position - target_position)
         reward -= dist_obj_tar
-        # dist_obj_tar = np.linalg.norm(obj_position[0:2] - self.target_location[0:2])
-        # if dist_obj_tar > (self.target_width - self.obj_width) / 2:
-        #     reward -= dist_obj_tar - (self.target_width - self.obj_width) / 2
 
-        # judge if the object is caught
-        if np.linalg.norm(obj_position[0:2] - self.obj_location[0:2]) > 0.02 and self.grasp and not self.catch:
-            self.catch = True
-            reward += 1000
+        # judge if the object is dropped
+        if np.linalg.norm(state[0:3] - obj_position - np.asarray([0, 0, self.obj_height / 2])) > 0.05:
+            reward -= 5000
+            done = True
 
-        # judge if the object is overturned
-        if obj_position[2] < self.obj_height / 2 - 0.05 and not self.overturn_goal:
-            self.overturn_goal = True
-            reward -= 1000
+        # judge if the obstacle is moved
+        if np.linalg.norm(obstacle_position - self.obstacle_location) > 0.025:
+            reward -= 5000
             done = True
 
         # judge if the object has been moved to the target
@@ -483,13 +468,6 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
 
         return reward, done
 
-    def close_gripper(self, state):
-        catch_position = self.obj.get_position() + np.asarray([0, 0, self.obj_height / 2 - 0.01])
-        if np.linalg.norm(state['ee_position'][0] - catch_position[0]) < 0.02 \
-                and np.linalg.norm(state['ee_position'][1] - catch_position[1]) < 0.02 \
-                and np.linalg.norm(state['ee_position'][2] - catch_position[2]) < 0.007:
-            self.grasp = True
-
     def step(self, action):
         # get real action
         action_real = action * 2
@@ -499,8 +477,7 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
         self.step_number += 1
 
         # action in this example is the end-effector and grasp
-        self.close_gripper(state)
-        self.panda.step(dposition=action_real[0:3], grasp_open=not self.grasp)
+        self.panda.step(dposition=action_real, grasp_open=not self.grasp)
 
         # take simulation step
         p.stepSimulation()
@@ -537,7 +514,6 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
             key_input["reset"],
         )
         action = dpos
-        self.close_gripper(state)
         # action[0:3] = dpos
 
         # action in this example is the end-effector velocity
