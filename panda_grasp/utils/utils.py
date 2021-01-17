@@ -97,7 +97,7 @@ def build_mlp(input_dim, output_dim, hidden_units=(64, 64),
     return nn.Sequential(*layers)
 
 
-def evaluation(env, actor, episodes, render=False, seed=0, delay=0.03):
+def evaluation(env, actor, episodes, seed=0):
     env.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -106,31 +106,27 @@ def evaluation(env, actor, episodes, render=False, seed=0, delay=0.03):
     total_return = 0.0
     num_episodes = 0
     num_steps = []
+    max_speed = 0
 
     state = env.reset()
-    t = 0
     episode_return = 0.0
     episode_steps = 0
 
     while num_episodes < episodes:
-        t += 1
-
         state = torch.tensor(state, dtype=torch.float)
         action = actor(state)
+        action = action.cpu().detach().numpy()
+        if np.linalg.norm(action) > max_speed:
+            max_speed = np.linalg.norm(action)
         next_state, reward, done, _ = env.step(action)
         episode_return += reward
         episode_steps += 1
         state = next_state
 
-        if render:
-            env.render()
-            time.sleep(delay)
-
-        if done or t == env.max_episode_steps:
+        if done or episode_steps == env.max_episode_steps:
             num_episodes += 1
             total_return += episode_return
             state = env.reset()
-            t = 0
             episode_return = 0.0
             num_steps.append(episode_steps)
             episode_steps = 0
@@ -139,10 +135,10 @@ def evaluation(env, actor, episodes, render=False, seed=0, delay=0.03):
     print(f'Mean return of the policy is {mean_return}')
     print(f'Max episode steps is {np.max(num_steps)}')
     print(f'Min episode steps is {np.min(num_steps)}')
+    print(f'Max speed is {max_speed}')
     return mean_return
 
 
-def save_models(save_dir, actor, step):
-    if not os.path.isdir(save_dir):
-        os.mkdir(save_dir)
-    torch.save(actor.state_dict(), f'{save_dir}/actor_{step}.pkl')
+def disable_gradient(network):
+    for param in network.parameters():
+        param.requires_grad = False

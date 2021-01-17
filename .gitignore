@@ -10,3 +10,5 @@ teleop.py
 buffer
 pics/
 train_bc.py
+eval_bc.py
+model/
