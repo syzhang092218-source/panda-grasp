@@ -332,7 +332,7 @@ class PandaMoveBoxEnv(PandaRawEnv):
 
 class PandaAvoidObstacleEnv(PandaRawEnv):
 
-    def __init__(self, engine='DIRECT', max_episode_steps=5000):
+    def __init__(self, engine='DIRECT', max_episode_steps=2000):
         super(PandaAvoidObstacleEnv, self).__init__(engine)
         p.getConnectionInfo()
         p.setPhysicsEngineParameter(enableFileCaching=0)
@@ -449,7 +449,7 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
         reward -= dist_obj_tar
 
         # judge if the object is dropped
-        if np.linalg.norm(state[0:3] - obj_position - np.asarray([0, 0, self.obj_height / 2])) > 0.05:
+        if np.linalg.norm(state['ee_position'] - obj_position - np.asarray([0, 0, self.obj_height / 2])) > 0.05:
             reward -= 5000
             done = True
 
