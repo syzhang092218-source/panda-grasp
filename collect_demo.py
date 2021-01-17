@@ -4,7 +4,7 @@ import os
 
 from panda_grasp.env import PandaMoveBoxEnv
 from panda_grasp.utils.utils import collect_demo
-from panda_grasp.utils import POLICY
+from panda_grasp.policy import PANDA_MOVE_BOX_POLICY
 
 
 def main(args):
@@ -13,7 +13,7 @@ def main(args):
 
     buffer, mean_return = collect_demo(
         env=env,
-        policy=POLICY[args.policy],
+        policy=PANDA_MOVE_BOX_POLICY[args.policy],
         buffer_size=args.buffer_size,
         device=device,
         std=args.std,
