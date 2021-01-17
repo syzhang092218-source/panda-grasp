@@ -12,7 +12,7 @@ register(
 register(
     id='PandaAvoidObstacle-v0',
     entry_point='panda_grasp.env:PandaAvoidObstacleEnv',
-    max_episode_steps=5000,
+    max_episode_steps=2000,
 )
 
 ENV = {
@@ -22,5 +22,5 @@ ENV = {
 
 POLICY = {
     'PandaMoveBox-v0': PANDA_MOVE_BOX_POLICY,
-    'PandaAvoidObstacle-v0': PANDA_MOVE_BOX_POLICY,
+    'PandaAvoidObstacle-v0': PANDA_AVOID_OBSTACLE_POLICY,
 }
