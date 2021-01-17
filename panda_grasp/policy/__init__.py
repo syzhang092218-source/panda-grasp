@@ -1,4 +1,5 @@
-from panda_grasp.policy.panda_move_box_policy import expert_policy, drag_policy, knock_over_policy, slow_policy, detour1_policy, detour2_policy, near_optimal_policy
+from panda_grasp.policy.panda_move_box_policy import \
+    expert_policy, drag_policy, knock_over_policy, slow_policy, detour1_policy, detour2_policy, near_optimal_policy
 
 
 PANDA_MOVE_BOX_POLICY = {
@@ -9,4 +10,8 @@ PANDA_MOVE_BOX_POLICY = {
     'detour1': detour1_policy,
     'detour2': detour2_policy,
     'near_optimal': near_optimal_policy
+}
+
+PANDA_AVOID_OBSTACLE_POLICY = {
+
 }
