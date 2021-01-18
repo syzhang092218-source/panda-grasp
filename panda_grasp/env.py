@@ -348,13 +348,13 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
         self.obj_height = 0.24
         self.obj_width = 0.06
 
-        # obstacle is a cube
+        # obstacle is another long box with a square bottom
         self.obstacle = YCBObject('xt_obstacle')
         self.obstacle.load()
-        self.obstacle_location = np.asarray([0.5, -0.15, 0.05])
+        self.obstacle_location = np.asarray([0.5, -0.15, 0.15])
         p.resetBasePositionAndOrientation(self.obstacle.body_id, self.obstacle_location, [0, 0, 0, 1])
         self.obstacle_width = 0.1
-        self.obstacle_height = 0.1
+        self.obstacle_height = 0.3
 
         # set the target location
         self.target = YCBObject('zsy_base')
@@ -441,21 +441,26 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
         obstacle_position = self.obstacle.get_position()
 
         # punish the energy cost
-        reward -= np.linalg.norm(action) * 0.1
+        reward -= np.linalg.norm(action) * 2
 
         # punish the distance between the object and the target
         target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
         dist_obj_tar = np.linalg.norm(obj_position - target_position)
-        reward -= dist_obj_tar
+        reward -= dist_obj_tar * 5
 
         # judge if the object is dropped
         if np.linalg.norm(state['ee_position'] - obj_position - np.asarray([0, 0, self.obj_height / 2])) > 0.05:
-            reward -= 5000
+            reward -= 2000
             done = True
 
         # judge if the obstacle is moved
-        if np.linalg.norm(obstacle_position - self.obstacle_location) > 0.025:
-            reward -= 5000
+        if np.linalg.norm(obstacle_position[0:2] - self.obstacle_location[0:2]) > 0.02:
+            reward -= 2000
+            done = True
+
+        # judge if the target is moved
+        if np.linalg.norm(target_position[0:2] - self.target_location[0:2]) > 0.02:
+            reward -= 2000
             done = True
 
         # judge if the object has been moved to the target

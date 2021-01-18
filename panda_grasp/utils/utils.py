@@ -5,12 +5,6 @@ import os
 
 from .buffer import Buffer
 from tqdm import tqdm
-from panda_grasp import ENV, POLICY
-
-
-def add_random_noise(action, std):
-    action += np.random.randn(*action.shape) * std
-    return action.clip(-1.0, 1.0)
 
 
 def collect_demo(env, policy, buffer_size, device, std, seed=0):
