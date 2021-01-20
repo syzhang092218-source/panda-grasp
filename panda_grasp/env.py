@@ -557,3 +557,232 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
                                                         aspect=float(self.camera_width) / self.camera_height,
                                                         nearVal=0.1,
                                                         farVal=100.0)
+
+
+class PandaAvoidLyingObstacleEnv(PandaRawEnv):
+
+    def __init__(self, engine='DIRECT', max_episode_steps=2000):
+        super(PandaAvoidLyingObstacleEnv, self).__init__(engine)
+        p.getConnectionInfo()
+        p.setPhysicsEngineParameter(enableFileCaching=0)
+        self.max_episode_steps = max_episode_steps
+
+        # set location of the object
+        self.obj_location = np.asarray([0.7, 0., 0.12])
+
+        # object is a long box with a square bottom
+        self.obj = YCBObject('zsy_long_box')
+        self.obj.load()
+        p.resetBasePositionAndOrientation(self.obj.body_id, self.obj_location, [0, 0, 0, 1])
+        self.obj_height = 0.24
+        self.obj_width = 0.06
+
+        # obstacle is a lying long box with a square bottom
+        self.obstacle = YCBObject('xt_lying_obstacle')
+        self.obstacle.load()
+        self.obstacle_location = np.asarray([0.5, -0.15, 0.05])
+        p.resetBasePositionAndOrientation(self.obstacle.body_id, self.obstacle_location, [0, 0, 0, 1])
+        self.obstacle_width = 0.3
+        self.obstacle_height = 0.1
+
+        # set the target location
+        self.target = YCBObject('zsy_base')
+        self.target.load()
+        self.target_location = np.asarray([0.3, -0.3, 0])
+        p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
+        self.target_width = 0.12
+        self.target_height = 0.02
+
+        # load a panda robot
+        self.seed(1234)
+        self.arm_id = self.panda.panda
+        self.obj_id = self.obj.body_id
+
+        # open the gripper
+        self.grasp = False
+
+        # action space is the end-effector's normalized velocity
+        self.action_space = spaces.Box(
+            low=np.array([-1., -1., -1.]),
+            high=np.array([1., 1., 1.]),
+            dtype=np.float64
+        )
+
+        # observation space is
+        # [ee_position*3, joint_position*7, joint_velocity*7, joint_torque*7,
+        # obj_location*3, obj_height, obj_width,
+        # obstacle_location*3, obstacle_height, obstacle_width,
+        # target_location*3, target_height, target_width]
+        self.observation_space = spaces.Box(
+            low=np.array([-np.inf] * 39),
+            high=np.array([np.inf] * 39),
+            dtype=np.float64
+        )
+
+        self.step_number = 0
+        self.move_to_target = False
+
+        # connect to keyboard
+        self.key = Key(scale=0.1)
+
+    def reset(self):
+        self.step_number = 0
+        self.move_to_target = False
+        self.grasp = True
+        obs = [0., 0.58, 0., -1.55, 0., 2.1, 0.]
+        p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(self.obstacle.body_id, self.obstacle_location, [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
+        self.panda.reset_with_obs(obs)
+        return_state = self.return_state()
+        return return_state
+
+    def seed(self, seed=None):
+        self.panda.seed(seed)
+        return [seed]
+
+    def return_state(self):
+        # catch_position = self.obj.get_position() + np.asarray([0, 0, self.obj_height / 2])
+        # dist_ee_obj = np.linalg.norm(self.panda.state['ee_position'] - catch_position)
+        # target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
+        # dist_obj_tar = np.linalg.norm(self.obj.get_position() - target_position)
+        return_state = np.concatenate(
+            [self.panda.state['ee_position'],
+             self.panda.state['joint_position'][0:7],
+             self.panda.state['joint_velocity'][0:7],
+             self.panda.state['joint_torque'][0:7],
+             self.obj.get_position(),
+             np.array([self.obj_height]),
+             np.array([self.obj_width]),
+             self.obstacle.get_position(),
+             np.array([self.obstacle_height]),
+             np.array([self.obstacle_width]),
+             self.target.get_position(),
+             np.array([self.target_height]),
+             np.array([self.target_width])]
+        )
+        return return_state
+
+    def calculate_reward(self, state, action):
+        reward = 0
+        done = False
+        obj_position = self.obj.get_position()
+        obstacle_position = self.obstacle.get_position()
+
+        # punish the energy cost
+        reward -= np.linalg.norm(action) * 2
+
+        # punish the distance between the object and the target
+        target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
+        dist_obj_tar = np.linalg.norm(obj_position - target_position)
+        reward -= dist_obj_tar * 5
+
+        # judge if the object is dropped
+        if np.linalg.norm(state['ee_position'] - obj_position - np.asarray([0, 0, self.obj_height / 2])) > 0.05:
+            reward -= 2000
+            done = True
+
+        # judge if the obstacle is moved
+        if np.linalg.norm(obstacle_position[0:2] - self.obstacle_location[0:2]) > 0.02:
+            reward -= 2000
+            done = True
+
+        # judge if the target is moved
+        if np.linalg.norm(target_position[0:2] - self.target_location[0:2]) > 0.02:
+            reward -= 2000
+            done = True
+
+        # judge if the object has been moved to the target
+        if abs(obj_position[0] - self.target_location[0]) < (self.target_width - self.obj_width) / 2 \
+                and abs(obj_position[1] - self.target_location[1]) < (self.target_width - self.obj_width) / 2 \
+                and obj_position[2] < self.target_height + self.obj_height / 2 and not self.move_to_target:
+            self.move_to_target = True
+            reward += 5000
+            done = False
+        elif self.move_to_target:
+            reward += 2
+            done = False
+
+        return reward, done
+
+    def step(self, action):
+        # get real action
+        action_real = action * 2
+
+        # get current state
+        state = self.panda.state
+        self.step_number += 1
+
+        # action in this example is the end-effector and grasp
+        self.panda.step(dposition=action_real, grasp_open=not self.grasp)
+
+        # take simulation step
+        p.stepSimulation()
+
+        # return next_state, reward, done, info
+        next_state = self.panda.state
+        info = next_state
+
+        return_state = self.return_state()
+
+        reward, done = self.calculate_reward(next_state, action_real)
+        # self.grasp = grasp
+
+        return return_state, reward, done, info
+
+    def teleop_step(self):
+        """
+        use keyboard to control the robot
+        :return: state, action, reward, next_state, done, info
+        """
+        time.sleep(0.0001)
+        # get current state
+        state = self.panda.state
+        self.step_number += 1
+
+        return_state = self.return_state()
+
+        # read in from keyboard
+        key_input = self.key.get_controller_state()
+        dpos, dquat, grasp, reset = (
+            key_input["dpos"],
+            key_input["dquat"],
+            key_input["grasp"],
+            key_input["reset"],
+        )
+        action = dpos
+        # action[0:3] = dpos
+
+        # action in this example is the end-effector velocity
+        self.panda.step(dposition=dpos, dquaternion=dquat, grasp_open=not self.grasp)
+
+        # take simulation step
+        p.stepSimulation()
+
+        # return next_state, reward, done, info
+        next_state = self.panda.state
+        return_next_state = self.return_state()
+        reward, done = self.calculate_reward(next_state, action)
+        print(f'step: {self.step_number}\treward: {reward}\tdone: {done}')
+        if reset:
+            done = True
+        info = self.panda.state
+
+        # self.grasp = grasp
+        return return_state, action, reward, return_next_state, done, info
+
+    def _set_camera(self):
+        self.camera_width = 512
+        self.camera_height = 512
+        p.resetDebugVisualizerCamera(cameraDistance=1, cameraYaw=20, cameraPitch=-30,
+                                     cameraTargetPosition=[0.5, -0.2, 0.2])
+        self.view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.5, 0, 0],
+                                                               distance=1.0,
+                                                               yaw=90,
+                                                               pitch=-50,
+                                                               roll=0,
+                                                               upAxisIndex=2)
+        self.proj_matrix = p.computeProjectionMatrixFOV(fov=60,
+                                                        aspect=float(self.camera_width) / self.camera_height,
+                                                        nearVal=0.1,
+                                                        farVal=100.0)
