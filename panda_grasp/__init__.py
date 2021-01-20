@@ -15,6 +15,12 @@ register(
     max_episode_steps=2000,
 )
 
+register(
+    id='PandaAvoidLyingObstacle-v0',
+    entry_point='panda_grasp.env:PandaAvoidLyingObstacleEnv',
+    max_episode_steps=2000,
+)
+
 ENV = {
     'PandaMoveBox-v0': PandaMoveBoxEnv,
     'PandaAvoidObstacle-v0': PandaAvoidObstacleEnv,
