@@ -469,7 +469,10 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
                 and obj_position[2] < self.target_height + self.obj_height / 2 and not self.move_to_target:
             self.move_to_target = True
             reward += 5000
-            done = True
+            done = False
+        elif self.move_to_target:
+            reward += 2
+            done = False
 
         return reward, done
 

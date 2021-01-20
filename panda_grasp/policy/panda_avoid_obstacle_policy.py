@@ -79,6 +79,7 @@ def expert_policy(state, std=0.1, init_vy=1, init_vz=0.2, distance=0.5):
     return action
 
 
+# -0.5 0.5 if collision; 1 1 if detour.
 def detour_policy(state, std=0.1, deviation_vy=1, deviation_vz=1):
     init_vy = 1 + deviation_vy
     init_vz = 0.2 + deviation_vz
