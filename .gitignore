@@ -9,6 +9,5 @@ try.py
 teleop.py
 buffer
 pics/
-train_bc.py
-eval_bc.py
+gen_traj.py
 model/

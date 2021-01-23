@@ -588,10 +588,10 @@ class PandaAvoidLyingObstacleEnv(PandaRawEnv):
         # set the target location
         self.target = YCBObject('zsy_base')
         self.target.load()
-        self.target_location = np.asarray([0.3, -0.3, 0])
+        self.target_location = np.asarray([0.3, -0.3, 0.0025])
         p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
         self.target_width = 0.12
-        self.target_height = 0.02
+        self.target_height = 0.005
 
         # load a panda robot
         self.seed(1234)
@@ -620,14 +620,12 @@ class PandaAvoidLyingObstacleEnv(PandaRawEnv):
         )
 
         self.step_number = 0
-        self.move_to_target = False
 
         # connect to keyboard
         self.key = Key(scale=0.1)
 
     def reset(self):
         self.step_number = 0
-        self.move_to_target = False
         self.grasp = True
         obs = [0., 0.58, 0., -1.55, 0., 2.1, 0.]
         p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
@@ -678,7 +676,7 @@ class PandaAvoidLyingObstacleEnv(PandaRawEnv):
         reward -= dist_obj_tar * 5
 
         # judge if the object is dropped
-        if np.linalg.norm(state['ee_position'] - obj_position - np.asarray([0, 0, self.obj_height / 2])) > 0.05:
+        if np.linalg.norm(state['ee_position'] - obj_position - np.asarray([0, 0, self.obj_height / 2])) > 0.1:
             reward -= 2000
             done = True
 
@@ -693,15 +691,11 @@ class PandaAvoidLyingObstacleEnv(PandaRawEnv):
             done = True
 
         # judge if the object has been moved to the target
-        if abs(obj_position[0] - self.target_location[0]) < (self.target_width - self.obj_width) / 2 \
-                and abs(obj_position[1] - self.target_location[1]) < (self.target_width - self.obj_width) / 2 \
-                and obj_position[2] < self.target_height + self.obj_height / 2 and not self.move_to_target:
-            self.move_to_target = True
+        if abs(obj_position[0] - self.target_location[0]) < self.target_width / 2 - 0.02\
+                and abs(obj_position[1] - self.target_location[1]) < self.target_width / 2 - 0.02\
+                and obj_position[2] < self.target_height + self.obj_height / 2 + 0.05:
             reward += 5000
-            done = False
-        elif self.move_to_target:
-            reward += 2
-            done = False
+            done = True
 
         return reward, done
 

@@ -79,9 +79,9 @@ def expert_policy(state, std=0.1, init_vy=1.5, init_vz=0.2, distance=0.5):
     return action
 
 
-# -0.5 0.5 if collision; 1 1 if detour.
-def detour_policy(state, std=0.1, deviation_vy=1, deviation_vz=1):
-    init_vy = 1 + deviation_vy
+# -0.5 0 if collision; 0.5 1 if detour.
+def detour_policy(state, std=0.1, deviation_vy=-0.2, deviation_vz=0):
+    init_vy = 1.5 + deviation_vy
     init_vz = 0.2 + deviation_vz
     action = expert_policy(state, std, init_vy, init_vz)
 
@@ -113,7 +113,7 @@ def mount_policy(state, std=0.1):
     return action
 
 
-def stray_policy(state, std, distance=0.8):
+def stray_policy(state, std, distance=0.7):
     action = expert_policy(state, std, distance=distance)
 
     return action
