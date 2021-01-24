@@ -583,7 +583,7 @@ class PandaAvoidLyingObstacleEnv(PandaRawEnv):
         self.obstacle_location = np.asarray([0.5, -0.15, 0.05])
         p.resetBasePositionAndOrientation(self.obstacle.body_id, self.obstacle_location, [0, 0, 0, 1])
         self.obstacle_width = 0.3
-        self.obstacle_height = 0.1
+        self.obstacle_height = 0.11
 
         # set the target location
         self.target = YCBObject('zsy_base')

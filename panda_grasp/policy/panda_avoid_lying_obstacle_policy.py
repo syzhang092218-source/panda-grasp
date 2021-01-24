@@ -93,7 +93,7 @@ def mount_policy(state, std=0.1):
     state_re = recover_state(state)
 
     # calculate speed on x/y/z axis in coordinate system of the parabola
-    init_vz = 0.7
+    init_vz = 0.9
     convert_matrix = np.asarray([[-0.8, -0.6], [0.6, -0.8]])
     t = np.matmul(convert_matrix.transpose(), np.asarray([state_re['ee_position'][0],
                                                           -state_re['ee_position'][1]]))[0] + 0.56
