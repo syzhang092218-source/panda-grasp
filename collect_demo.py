@@ -30,7 +30,7 @@ if __name__ == '__main__':
     p.add_argument('--env-id', type=str, default='PandaAvoidLyingObstacle-v0')
     p.add_argument('--buffer-size', type=int, default=40000)
     p.add_argument('--policy', type=str, default='expert')
-    p.add_argument('--std', type=float, default=0.05, help='suggest maximum std = 0.2 for PandaMoveBoxEnv')
+    p.add_argument('--std', type=float, default=0.05)
     p.add_argument('--seed', type=int, default=0)
     args = p.parse_args()
     main(args)

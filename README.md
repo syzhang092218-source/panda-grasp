@@ -1,6 +1,6 @@
 # Panda Grasp
 
-[PyBullet](https://pybullet.org/wordpress/) Environment for Panda Robot Arm, containing a PandaMoveBox env and a PandaAvoidObstacle env registered in [gym](https://gym.openai.com/).
+[PyBullet](https://pybullet.org/wordpress/) Environment for Panda Robot Arm, containing PandaMoveBox env, PandaAvoidObstacle env PandaAvoidLyingObstacle env registered in [gym](https://gym.openai.com/).
 
 Developed by [Songyuan Zhang](https://syzhang092218-source.github.io/) and [Tong Xiao](https://github.com/TongXiao2000).
 
@@ -18,6 +18,18 @@ pip install -r requirements.txt
 
 # install the package
 pip install -e .
+```
+
+## Policies
+
+We prepared several policies for each environment. Please refer to ```panda_grasp.policy``` for policies. 
+
+## Collect Demonstrations
+
+One can collect demonstrations for Imitation Learning with different policies using the following commands:
+
+```bash
+python collect_demo.py --env-id PandaAvoidLyingObstacle-v0 --buffer-size 40000 --policy expert --std 0.05 --seed 0
 ```
 
 ## Acknowledgement 

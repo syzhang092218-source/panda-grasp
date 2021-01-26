@@ -54,7 +54,7 @@ def target2source(location):
 
 
 # expert policy is a parabola from start point to target, avoiding the obstacle
-def expert_policy(state, std=0.1, init_vy=1.5, init_vz=0.2, distance=0.5):
+def best_detour_policy(state, std=0.1, init_vy=1.5, init_vz=0.2, distance=0.5):
     # recover data from state
     state_re = recover_state(state)
 
@@ -83,12 +83,12 @@ def expert_policy(state, std=0.1, init_vy=1.5, init_vz=0.2, distance=0.5):
 def detour_policy(state, std=0.1, deviation_vy=-0.2, deviation_vz=0):
     init_vy = 1.5 + deviation_vy
     init_vz = 0.2 + deviation_vz
-    action = expert_policy(state, std, init_vy, init_vz)
+    action = best_detour_policy(state, std, init_vy, init_vz)
 
     return action
 
 
-def mount_policy(state, std=0.1):
+def expert_policy(state, std=0.1):
     # recover data from state
     state_re = recover_state(state)
 
@@ -114,14 +114,14 @@ def mount_policy(state, std=0.1):
 
 
 def stray_policy(state, std, distance=0.7):
-    action = expert_policy(state, std, distance=distance)
+    action = best_detour_policy(state, std, distance=distance)
 
     return action
 
 
 PANDA_AVOID_LYING_OBSTACLE_POLICY = {
-    'expert': expert_policy,
+    'best_detour': best_detour_policy,
     'detour': detour_policy,
-    'mount': mount_policy,
+    'expert': expert_policy,
     'stray': stray_policy,
 }
