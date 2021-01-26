@@ -9,3 +9,5 @@ try.py
 teleop.py
 buffer
 pics/
+gen_traj.py
+model/

@@ -1,0 +1,3 @@
+from .panda_avoid_obstacle_policy import PANDA_AVOID_OBSTACLE_POLICY
+from .panda_move_box_policy import PANDA_MOVE_BOX_POLICY
+from .panda_avoid_lying_obstacle_policy import PANDA_AVOID_LYING_OBSTACLE_POLICY

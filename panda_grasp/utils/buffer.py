@@ -1,5 +1,39 @@
 import torch
 import os
+import numpy as np
+
+
+class SerializedBuffer:
+
+    def __init__(self, path, device):
+        tmp = torch.load(path)
+        self.buffer_size = self._n = tmp['state'].size(0)
+        self.device = device
+
+        self.states = tmp['state'].clone().to(self.device)
+        self.actions = tmp['action'].clone().to(self.device)
+        self.rewards = tmp['reward'].clone().to(self.device)
+        self.dones = tmp['done'].clone().to(self.device)
+        self.next_states = tmp['next_state'].clone().to(self.device)
+
+    def sample(self, batch_size):
+        idxes = np.random.randint(low=0, high=self._n, size=batch_size)
+        return (
+            self.states[idxes],
+            self.actions[idxes],
+            self.rewards[idxes],
+            self.dones[idxes],
+            self.next_states[idxes]
+        )
+
+    def get(self):
+        return (
+            self.states,
+            self.actions,
+            self.rewards,
+            self.dones,
+            self.next_states
+        )
 
 
 class Buffer:
