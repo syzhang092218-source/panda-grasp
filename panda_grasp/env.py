@@ -693,7 +693,7 @@ class PandaAvoidLyingObstacleEnv(PandaRawEnv):
         # judge if the object has been moved to the target
         if abs(obj_position[0] - self.target_location[0]) < self.target_width / 2 - 0.02\
                 and abs(obj_position[1] - self.target_location[1]) < self.target_width / 2 - 0.02\
-                and obj_position[2] < self.target_height + self.obj_height / 2 + 0.05:
+                and obj_position[2] < self.target_height + self.obj_height / 2 + 0.1:
             reward += 5000
             done = True
 

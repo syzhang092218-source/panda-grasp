@@ -7,7 +7,7 @@ from .buffer import Buffer
 from tqdm import tqdm
 
 
-def collect_demo(env, policy, buffer_size, device, std, seed=0):
+def collect_demo(env, policy, buffer_size, device, std, continuous, seed=0):
     env.seed(seed)
     np.random.seed(seed)
 
@@ -23,6 +23,8 @@ def collect_demo(env, policy, buffer_size, device, std, seed=0):
     num_episodes = 0
 
     state = env.reset()
+    init_vy = 0
+    init_vz = 0.9
     t = 0
     episode_return = 0.0
     episode_steps = 0
@@ -30,8 +32,10 @@ def collect_demo(env, policy, buffer_size, device, std, seed=0):
     for _ in tqdm(range(1, buffer_size + 1)):
         t += 1
 
-        action = policy(state, std)
-
+        if continuous:
+            action = policy(state, std, init_vy, init_vz)
+        else:
+            action = policy(state, std)
         next_state, reward, done, _ = env.step(action)
         mask = True if t == env.max_episode_steps else done
         buffer.append(state, action, reward, mask, next_state)
@@ -40,6 +44,16 @@ def collect_demo(env, policy, buffer_size, device, std, seed=0):
         state = next_state
 
         if done or t == env.max_episode_steps:
+            print(init_vy, ',', init_vz, ',', episode_return)
+            if continuous:
+                if init_vy < 1.5:
+                    init_vy += 0.03
+                elif init_vz < 1.5:
+                    init_vy += 0.03
+                    init_vz += 0.05
+                else:
+                    init_vy = 0
+                    init_vz = 0.9
             num_episodes += 1
             total_return += episode_return
             state = env.reset()
