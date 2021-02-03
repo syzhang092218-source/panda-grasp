@@ -16,6 +16,7 @@ def main(args):
         buffer_size=args.buffer_size,
         device=device,
         std=args.std,
+        continuous=args.continuous,
         seed=args.seed
     )
     buffer.save(os.path.join(
@@ -27,10 +28,11 @@ def main(args):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('--env-id', type=str, default='PandaAvoidLyingObstacle-v0')
+    p.add_argument('--env-id', type=str, default='PandaAvoidObstacle-v0')
     p.add_argument('--buffer-size', type=int, default=40000)
     p.add_argument('--policy', type=str, default='expert')
     p.add_argument('--std', type=float, default=0.05)
+    p.add_argument('--continuous', type=bool, default=False, help='if True, collect continuous suboptimal trajectories')
     p.add_argument('--seed', type=int, default=0)
     args = p.parse_args()
     main(args)

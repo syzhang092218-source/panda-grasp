@@ -34,12 +34,17 @@ def add_random_noise(action, std):
 
 
 def expert_policy(state, std):
+    """
+    best policy in this environment
+    :param state: current state
+    :param std: standard deviation of the action
+    :return: action is velocity on x/y/z axis(Vx/y/z:[-1, 1])
+    """
     # recover data from state
     state_re = recover_state(state)
 
     # calculate ee destination
     catch_location = state_re['obj_location'] + np.asarray([0, 0, state_re['obj_height'] / 2])
-    # put_location = state_re['target_location'] + np.asarray([0, 0, state_re['target_height'] / 2 + state_re['obj_height']])
     put_location = state_re['target_location'] + np.asarray([0, 0, state_re['obj_height']])
 
     # move robot arm to catch the object
@@ -71,8 +76,10 @@ def expert_policy(state, std):
     return action
 
 
-# remove the lifting part of expert policy
 def drag_policy(state, std):
+    """
+    remove the lifting part of expert policy
+    """
     # recover data from state
     state_re = recover_state(state)
 
@@ -103,41 +110,20 @@ def drag_policy(state, std):
     return action
 
 
-# reduce maximum speed to 20% of expert policy
 def slow_policy(state, std):
-    # recover data from state
-    state_re = recover_state(state)
-
-    # calculate ee destination
-    catch_location = state_re['obj_location'] + np.asarray([0, 0, state_re['obj_height'] / 2])
-    put_location = state_re['target_location'] + np.asarray([0, 0, state_re['target_height'] / 2 + state_re['obj_height']])
-
-    # move robot arm to catch the object
-    if not state_re['grasp']:
-        direction = catch_location - state_re['ee_position']
-        # reduce end-effector's velocity when close to the object in case ee knocks it over
-        ratio = 35
-        action = direction / (np.linalg.norm(direction) * ratio)
-
-    # move the object to the target
-    else:
-        direction = put_location - state_re['ee_position']
-        action = direction / (np.linalg.norm(direction) * 35)
-        # when first catching the object, lift it up a bit to prevent it from leaning
-        if state_re['ee_position'][2] < 0.236:
-            action = np.asarray([0, 0, 0.04])
-
-    # add standard deviation and restrictions
-    if state_re['grasp'] and state_re['dist_obj_tar'] > 0.2:
-        action = add_random_noise(action / 2, std)
-    else:
-        action /= 2
+    """
+    reduce maximum speed to 20% of expert policy
+    """
+    action = expert_policy(state, std)
+    action /= 5
 
     return action
 
 
-# value shift on action[0] so that ee knocks the object over
 def knock_over_policy(state, std):
+    """
+    value shift on action[0] so that ee knocks the object over
+    """
     # recover data from state
     state_re = recover_state(state)
 
@@ -158,10 +144,15 @@ def knock_over_policy(state, std):
     return action
 
 
-# move a longer distance instead of straight to destinations
-# alpha & beta indicates the extent of detour(notice detour route is fixed)
-# empirically alpha_max = beta_max = 1
 def detour1_policy(state, std, alpha=0.1, beta=0.1):
+    """
+    move a longer distance instead of straight to destinations
+    :param state: current state
+    :param std: standard deviation of the action
+    :param alpha: alpha & beta indicates the extent of detour(notice detour route is fixed)
+    :param beta: empirically alpha_max = beta_max = 1
+    :return: action is velocity on x/y/z axis(Vx/y/z:[-1, 1])
+    """
     # recover data from state
     state_re = recover_state(state)
 
@@ -208,10 +199,15 @@ def detour1_policy(state, std, alpha=0.1, beta=0.1):
     return action
 
 
-# move a longer distance instead of straight to destinations
-# alpha & beta indicates the extent of detour(notice detour route is fixed)
-# empirically alpha_max = beta_max = 1
 def detour2_policy(state, std, alpha=0.1, beta=0.1):
+    """
+    move a longer distance instead of straight to destinations(different route compared to detour1)
+    :param state: current state
+    :param std: standard deviation of the action
+    :param alpha: alpha & beta indicates the extent of detour(notice detour route is fixed)
+    :param beta: empirically alpha_max = beta_max = 1
+    :return: action is velocity on x/y/z axis(Vx/y/z:[-1, 1])
+    """
     # recover data from state
     state_re = recover_state(state)
 
@@ -259,6 +255,9 @@ def detour2_policy(state, std, alpha=0.1, beta=0.1):
 
 
 def near_optimal_policy(state, std):
+    """
+    mixture of expert & detour1 & detour2 policy
+    """
     choice = random.choice(['expert', 'detour1', 'detour2'])
     if choice == 'expert':
         return expert_policy(state, std)

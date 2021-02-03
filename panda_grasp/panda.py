@@ -53,14 +53,12 @@ class Panda:
         random_number = self.np_random.uniform(low=-.1, high=.1, size=len(init_pos)) * 0.5
         for i in [1, 3, 5]:
             init_pos[i] += random_number[i]
-        #init_pos = [0.0, 0.0, 0.0, -2*np.pi/4, 0.0, np.pi/2, np.pi/4, 0.0, 0.0, 0.05, 0.05]
         self._reset_robot(init_pos)
 
     def reset_with_obs(self, obs_state):
         init_pos = copy.deepcopy(self.init_pos)
         for i in [1, 3, 5]:
             init_pos[i] = obs_state[i]
-        #init_pos = [0.0, 0.0, 0.0, -2*np.pi/4, 0.0, np.pi/2, np.pi/4, 0.0, 0.0, 0.05, 0.05]
         self._reset_robot(init_pos)
 
     def seed(self, seed=None):

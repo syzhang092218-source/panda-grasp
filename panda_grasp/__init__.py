@@ -1,6 +1,6 @@
 from gym.envs.registration import register
-from .env import PandaMoveBoxEnv, PandaAvoidObstacleEnv, PandaAvoidLyingObstacleEnv
-from .policy import PANDA_MOVE_BOX_POLICY, PANDA_AVOID_OBSTACLE_POLICY, PANDA_AVOID_LYING_OBSTACLE_POLICY
+from .env import PandaMoveBoxEnv, PandaAvoidObstacleEnv
+from .policy import PANDA_MOVE_BOX_POLICY, PANDA_AVOID_OBSTACLE_POLICY
 
 
 register(
@@ -15,20 +15,12 @@ register(
     max_episode_steps=2000,
 )
 
-register(
-    id='PandaAvoidLyingObstacle-v0',
-    entry_point='panda_grasp.env:PandaAvoidLyingObstacleEnv',
-    max_episode_steps=2000,
-)
-
 ENV = {
     'PandaMoveBox-v0': PandaMoveBoxEnv,
     'PandaAvoidObstacle-v0': PandaAvoidObstacleEnv,
-    'PandaAvoidLyingObstacle-v0': PandaAvoidLyingObstacleEnv,
 }
 
 POLICY = {
     'PandaMoveBox-v0': PANDA_MOVE_BOX_POLICY,
     'PandaAvoidObstacle-v0': PANDA_AVOID_OBSTACLE_POLICY,
-    'PandaAvoidLyingObstacle-v0': PANDA_AVOID_LYING_OBSTACLE_POLICY,
 }
