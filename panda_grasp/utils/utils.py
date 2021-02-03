@@ -44,7 +44,6 @@ def collect_demo(env, policy, buffer_size, device, std, continuous, seed=0):
 
         if done or t == env.max_episode_steps:
             if continuous:
-                print(init_vy, ',', init_vz, ',', episode_return)
                 if init_vy < 1.5:
                     init_vy += 0.03
                 elif init_vz < 1.5:
