@@ -2,7 +2,7 @@
 
 [PyBullet](https://pybullet.org/wordpress/) Environment for Panda Robot Arm, containing PandaMoveBox env, PandaAvoidObstacle env PandaAvoidLyingObstacle env registered in [gym](https://gym.openai.com/).
 
-Developed by [Songyuan Zhang](https://syzhang092218-source.github.io/) and [Tong Xiao](https://github.com/TongXiao2000).
+Developed by [Songyuan Zhang](https://syzhang092218-source.github.io/) and [Tong Xiao](https://tongxiao2000.github.io/).
 
 ## Install
 
@@ -28,8 +28,16 @@ We prepared several policies for each environment. Please refer to ```panda_gras
 
 One can collect demonstrations for Imitation Learning with different policies using the following commands:
 
+For optimal policy and discontinuous suboptimal policies:
+
 ```bash
-python collect_demo.py --env-id PandaAvoidLyingObstacle-v0 --buffer-size 40000 --policy expert --std 0.05 --seed 0
+python collect_demo.py --env-id PandaAvoidObstacle-v0 --buffer-size 40000 --policy expert --std 0.05 --seed 0
+```
+
+For continuous suboptimal policies:
+
+```bash
+python collect_demo.py --env-id PandaAvoidObstacle-v0 --buffer-size 40000 --policy base --continuous --std 0.05 --seed 0
 ```
 
 ## Acknowledgement 
