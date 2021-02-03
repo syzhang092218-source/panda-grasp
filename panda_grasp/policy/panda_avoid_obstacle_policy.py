@@ -1,6 +1,4 @@
 import numpy as np
-import math
-import random
 
 
 def recover_state(state):
@@ -53,8 +51,17 @@ def target2source(location):
     return target
 
 
-# expert policy is a parabola from start point to target, avoiding the obstacle
-def expert_policy(state, std=0.1, init_vy=1, init_vz=0.2, distance=0.5):
+def base_policy(state, std=0.1, init_vy=1.5, init_vz=0.2, distance=0.5):
+    """
+    base policy is a parabola from start point to target
+    :param state: current state
+    :param std: standard deviation of the action
+    :param init_vy: initial velocity in y axis's direction. note that the x axis is from start point to target,
+                    and y axis is on the plane of the table, perpendicular to x axis
+    :param init_vz: initial velocity in z axis's direction
+    :param distance: distance between start point to target
+    :return: action is velocity on x/y/z axis(Vx/y/z:[-1, 1])
+    """
     # recover data from state
     state_re = recover_state(state)
 
@@ -79,49 +86,41 @@ def expert_policy(state, std=0.1, init_vy=1, init_vz=0.2, distance=0.5):
     return action
 
 
-# -0.5 0.5 if collision; 1 1 if detour.
-def detour_policy(state, std=0.1, deviation_vy=1, deviation_vz=1):
-    init_vy = 1 + deviation_vy
+def detour_policy(state, std=0.1, deviation_vy=0.6, deviation_vz=1.3):
+    """
+    change initial Vy and Vz to detour or to hit the obstacle
+    """
+    init_vy = 1.5 + deviation_vy
     init_vz = 0.2 + deviation_vz
-    action = expert_policy(state, std, init_vy, init_vz)
+    action = base_policy(state, std, init_vy, init_vz)
 
     return action
 
 
-def mount_policy(state, std=0.1):
-    # recover data from state
-    state_re = recover_state(state)
-
+def expert_policy(state, std=0.1):
+    """
+    mount the obstacle(initial Vy = 0), the best policy in this environment
+    """
     # calculate speed on x/y/z axis in coordinate system of the parabola
-    init_vz = 2.5
-    convert_matrix = np.asarray([[-0.8, -0.6], [0.6, -0.8]])
-    t = np.matmul(convert_matrix.transpose(), np.asarray([state_re['ee_position'][0],
-                                                          -state_re['ee_position'][1]]))[0] + 0.56
-    t += 0.02
-    if t > 0.5:
-        t = 0.5
-
-    x = 0.2 * -4 * t + 0.7
-    y = -0.2 * 3 * t
-    z = init_vz * t - 2 * init_vz * t ** 2 + state_re['obj_height']
-    action = np.asarray([x, y, z]) - state_re['ee_position']
-    action = 0.1 * action / np.linalg.norm(action)
-
-    # add standard deviation and restrictions
-    action = add_random_noise(action, std)
+    init_vz = 0.9
+    init_vy = 0
+    action = base_policy(state, std, init_vy, init_vz)
 
     return action
 
 
-def stray_policy(state, std, distance=0.8):
-    action = expert_policy(state, std, distance=distance)
+def stray_policy(state, std, distance=0.7):
+    """
+    change distance to put the object in a wrong place
+    """
+    action = base_policy(state, std, distance=distance)
 
     return action
 
 
 PANDA_AVOID_OBSTACLE_POLICY = {
-    'expert': expert_policy,
+    'base': base_policy,
     'detour': detour_policy,
-    'mount': mount_policy,
+    'expert': expert_policy,
     'stray': stray_policy,
 }
