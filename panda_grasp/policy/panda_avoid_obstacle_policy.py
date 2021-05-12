@@ -51,7 +51,7 @@ def target2source(location):
     return target
 
 
-def base_policy(state, std=0.1, init_vy=1.5, init_vz=0.2, distance=0.5):
+def base_policy(state, env, std=0.1, init_vy=1.5, init_vz=0.2, distance=0.5):
     """
     base policy is a parabola from start point to target
     :param state: current state
@@ -86,7 +86,7 @@ def base_policy(state, std=0.1, init_vy=1.5, init_vz=0.2, distance=0.5):
     return action
 
 
-def detour_policy(state, std=0.1, deviation_vy=0.6, deviation_vz=1.3):
+def detour_policy(state, env, std=0.1, deviation_vy=0.6, deviation_vz=1.3):
     """
     change initial Vy and Vz to detour or to hit the obstacle
     """
@@ -97,7 +97,7 @@ def detour_policy(state, std=0.1, deviation_vy=0.6, deviation_vz=1.3):
     return action
 
 
-def expert_policy(state, std=0.1):
+def expert_policy(state, env, std=0.1):
     """
     mount the obstacle(initial Vy = 0), the best policy in this environment
     """
@@ -109,13 +109,21 @@ def expert_policy(state, std=0.1):
     return action
 
 
-def stray_policy(state, std, distance=0.7):
+def stray_policy(state, env, std, distance=0.7):
     """
     change distance to put the object in a wrong place
     """
     action = base_policy(state, std, distance=distance)
 
     return action
+
+
+PolicyParams = {
+    'default_init_vy': 0,
+    'default_init_vz': 0.9,
+    'max_init_vy': 1.5,
+    'max_init_vz': 1.5,
+}
 
 
 PANDA_AVOID_OBSTACLE_POLICY = {

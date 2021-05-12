@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import pybullet as p
 import pybullet_data
@@ -483,6 +485,244 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
 
         reward, done = self.calculate_reward(next_state, action_real)
         # self.grasp = grasp
+
+        return return_state, reward, done, info
+
+    def teleop_step(self):
+        """
+        use keyboard to control the robot
+        :return: state, action, reward, next_state, done, info
+        """
+        # get current state
+        state = self.panda.state
+        self.step_number += 1
+
+        return_state = self.return_state()
+
+        # read in from keyboard
+        key_input = self.key.get_controller_state()
+        dpos, dquat, grasp, reset = (
+            key_input["dpos"],
+            key_input["dquat"],
+            key_input["grasp"],
+            key_input["reset"],
+        )
+        action = dpos
+
+        # action in this example is the end-effector velocity
+        self.panda.step(dposition=dpos, dquaternion=dquat, grasp_open=not self.grasp)
+
+        # take simulation step
+        p.stepSimulation()
+
+        # return next_state, reward, done, info
+        next_state = self.panda.state
+        return_next_state = self.return_state()
+        reward, done = self.calculate_reward(next_state, action)
+        print(f'step: {self.step_number}\treward: {reward}\tdone: {done}')
+        if reset:
+            done = True
+        info = self.panda.state
+
+        return return_state, action, reward, return_next_state, done, info
+
+    def _set_camera(self):
+        self.camera_width = 512
+        self.camera_height = 512
+        p.resetDebugVisualizerCamera(cameraDistance=1, cameraYaw=20, cameraPitch=-30,
+                                     cameraTargetPosition=[0.5, -0.2, 0.2])
+        self.view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.5, 0, 0],
+                                                               distance=1.0,
+                                                               yaw=90,
+                                                               pitch=-50,
+                                                               roll=0,
+                                                               upAxisIndex=2)
+        self.proj_matrix = p.computeProjectionMatrixFOV(fov=60,
+                                                        aspect=float(self.camera_width) / self.camera_height,
+                                                        nearVal=0.1,
+                                                        farVal=100.0)
+
+
+class PandaAvoidObstacleRandomEnv(PandaRawEnv):
+
+    def __init__(self, engine='DIRECT', max_episode_steps=2000):
+        super(PandaAvoidObstacleRandomEnv, self).__init__(engine)
+        p.getConnectionInfo()
+        p.setPhysicsEngineParameter(enableFileCaching=0)
+        self.max_episode_steps = max_episode_steps
+
+        # object is a long box with a square bottom
+        self.obj = YCBObject('zsy_long_box')
+        self.obj.load()
+        self.obj_height = 0.24
+        self.obj_width = 0.06
+        self.obj_region = np.asarray([[0.68, 0.72], [-0.05, 0]])
+        self.obj_location = self._reset_obj()
+        p.resetBasePositionAndOrientation(self.obj.body_id, self.obj_location, [0, 0, 0, 1])
+
+        # obstacle is a lying long box
+        self.obstacle = YCBObject('xt_obstacle')
+        self.obstacle.load()
+        self.obstacle_width = 0.3
+        self.obstacle_height = 0.11
+        self.obstacle_location = np.asarray([0.5, -0.15, 0.05])
+        p.resetBasePositionAndOrientation(self.obstacle.body_id, self.obstacle_location, [0, 0, 0, 1])
+
+        # set the target location
+        self.target = YCBObject('zsy_base')
+        self.target.load()
+        self.target_width = 0.12
+        self.target_height = 0.005
+        self.target_region = np.asarray([[0.28, 0.32], [-0.32, -0.28]])
+        self.target_location = self._reset_target()
+        p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
+
+        # load a panda robot
+        self.seed(1234)
+        self.arm_id = self.panda.panda
+        self.obj_id = self.obj.body_id
+        self._reset_ee(self.obj_location)
+
+        # action space is the end-effector's normalized velocity
+        self.action_space = spaces.Box(
+            low=np.array([-1., -1., -1.]),
+            high=np.array([1., 1., 1.]),
+            dtype=np.float32
+        )
+
+        # observation space is
+        # [ee_position*3, target_location*3]
+        self.observation_space = spaces.Box(
+            low=np.array([-np.inf] * 6),
+            high=np.array([np.inf] * 6),
+            dtype=np.float32
+        )
+
+        self.step_number = 0
+
+        # connect to keyboard
+        self.key = Key(scale=0.1)
+
+    def _reset_obj(self):
+        x = random.uniform(self.obj_region[0, 0], self.obj_region[0, 1])
+        y = random.uniform(self.obj_region[1, 0], self.obj_region[1, 1])
+        self.obj_location = np.asarray([x, y, self.obj_height / 2])
+        return self.obj_location
+
+    def _reset_target(self):
+        x = random.uniform(self.target_region[0, 0], self.target_region[0, 1])
+        y = random.uniform(self.target_region[1, 0], self.target_region[1, 1])
+        self.target_location = np.asarray([x, y, 0.0025])
+        return self.target_location
+
+    def _reset_ee(self, obj_location, grasp=True):
+        self.ee_location = obj_location + np.asarray([0., 0., self.obj_height / 2 - 0.03])
+        self.panda.reset_with_ee_pos(self.ee_location, grasp_open=not grasp)
+
+    def reset(self):
+        self.step_number = 0
+        self._reset_obj()
+        self._reset_target()
+        p.resetBasePositionAndOrientation(self.obj_id, self.obj_location, [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(self.obstacle.body_id, self.obstacle_location, [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(self.target.body_id, self.target_location, [0, 0, 0, 1])
+        self._reset_ee(self.obj_location)
+        return_state = self.return_state()
+        return return_state
+
+    def seed(self, seed=None):
+        self.panda.seed(seed)
+        return [seed]
+
+    def return_state(self):
+        return_state = np.concatenate(
+            [self.panda.state['ee_position'],
+             # np.array([self.obj_height]),
+             # np.array([self.obj_width]),
+             # self.obstacle.get_position(),
+             # np.array([self.obstacle_height]),
+             # np.array([self.obstacle_width]),
+             self.target.get_position(),
+             # np.array([self.target_height]),
+             # np.array([self.target_width])]
+            ]
+        )
+        return return_state
+
+    def return_info(self):
+        return {
+            'ee_position': self.panda.state['ee_position'],
+            'obj_location': np.array(self.obj.get_position()),
+            'obj_height': self.obj_height,
+            'obj_width': self.obj_width,
+            'obstacle_location': np.array(self.obstacle.get_position()),
+            'obstacle_height': self.obstacle_height,
+            'obstacle_width': self.obstacle_width,
+            'target_location': np.array(self.target.get_position()),
+            'target_height': self.target_height,
+            'target_width': self.target_width
+        }
+
+    def calculate_reward(self, state, action):
+        reward = 0
+        done = False
+        obj_position = self.obj.get_position()
+        obstacle_position = self.obstacle.get_position()
+
+        # punish the energy cost
+        dist = np.linalg.norm(self.obj_location - self.target_location)
+        reward -= np.linalg.norm(action) * 2 / (dist ** 2)
+
+        # punish the distance between the object and the target
+        target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
+        dist_obj_tar = np.linalg.norm(obj_position - target_position)
+        reward -= dist_obj_tar * 5
+
+        # judge if the object is dropped
+        if np.linalg.norm(state['ee_position'] - obj_position - np.asarray([0, 0, self.obj_height / 2])) > 0.1:
+            reward -= 2000
+            done = True
+
+        # judge if the obstacle is moved
+        if np.linalg.norm(obstacle_position[0:2] - self.obstacle_location[0:2]) > 0.02:
+            reward -= 2000
+            done = True
+
+        # judge if the target is moved
+        if np.linalg.norm(target_position[0:2] - self.target_location[0:2]) > 0.02:
+            reward -= 2000
+            done = True
+
+        # judge if the object has been moved to the target
+        if abs(obj_position[0] - self.target_location[0]) < self.target_width / 2 - 0.02 \
+                and abs(obj_position[1] - self.target_location[1]) < self.target_width / 2 - 0.02 \
+                and obj_position[2] < self.target_height + self.obj_height / 2 + 0.1:
+            reward += 5000
+            done = True
+
+        return reward, done
+
+    def step(self, action):
+        # get real action
+        action_real = action * 2
+
+        # get current state
+        state = self.panda.state
+        self.step_number += 1
+
+        # action in this example is the end-effector and grasp
+        self.panda.step(dposition=action_real, grasp_open=False)
+
+        # take simulation step
+        p.stepSimulation()
+
+        # return next_state, reward, done, info
+        next_state = self.panda.state
+        info = self.return_info()
+
+        return_state = self.return_state()
+
+        reward, done = self.calculate_reward(next_state, action_real)
 
         return return_state, reward, done, info
 

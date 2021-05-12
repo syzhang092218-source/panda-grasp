@@ -6,7 +6,7 @@ from .buffer import Buffer
 from tqdm import tqdm
 
 
-def collect_demo(env, policy, buffer_size, device, std, continuous, seed=0):
+def collect_demo(env, policy, params, buffer_size, device, std, continuous, seed=0):
     env.seed(seed)
     np.random.seed(seed)
 
@@ -17,24 +17,26 @@ def collect_demo(env, policy, buffer_size, device, std, continuous, seed=0):
         device=device
     )
 
-    total_return = 0.0
+    returns = []
     num_steps = []
     num_episodes = 0
 
     state = env.reset()
-    init_vy = 0
-    init_vz = 0.9
     t = 0
     episode_return = 0.0
     episode_steps = 0
 
-    for _ in tqdm(range(1, buffer_size + 1)):
+    # set initial speed
+    init_vy = params['default_init_vy']
+    init_vz = params['default_init_vz']
+
+    for i_step in tqdm(range(1, buffer_size + 1)):
         t += 1
 
         if continuous:
-            action = policy(state, std, init_vy, init_vz)
+            action = policy(state, env, std, init_vy, init_vz)
         else:
-            action = policy(state, std)
+            action = policy(state, env, std)
         next_state, reward, done, _ = env.step(action)
         mask = True if t == env.max_episode_steps else done
         buffer.append(state, action, reward, mask, next_state)
@@ -43,28 +45,36 @@ def collect_demo(env, policy, buffer_size, device, std, continuous, seed=0):
         state = next_state
 
         if done or t == env.max_episode_steps:
+            # print(f'init_vy: {init_vy}, init_vz: {init_vz}')
+            tqdm.write(f'Reward: {episode_return}')
             if continuous:
-                if init_vy < 1.5:
-                    init_vy += 0.03
-                elif init_vz < 1.5:
-                    init_vy += 0.03
-                    init_vz += 0.05
-                else:
-                    init_vy = 0
-                    init_vz = 0.9
+                init_vy = params['default_init_vy'] + \
+                          (params['max_init_vy'] - params['default_init_vy']) * (i_step / (buffer_size + 1))
+                init_vz = params['default_init_vz'] + \
+                          (params['max_init_vz'] - params['default_init_vz']) * (i_step / (buffer_size + 1))
+                # if init_vy < params['max_init_vy']:
+                #     init_vy += 0.03
+                # elif init_vz < params['max_init_vz']:
+                #     init_vy += 0.03
+                #     init_vz += 0.05
+                # else:
+                #     init_vy = params['default_init_vy']
+                #     init_vz = params['default_init_vz']
             num_episodes += 1
-            total_return += episode_return
+            returns.append(episode_return)
+            # total_return += episode_return
             state = env.reset()
             t = 0
             episode_return = 0.0
             num_steps.append(episode_steps)
             episode_steps = 0
 
-    mean_return = total_return / num_episodes
-    print(f'Mean return of the expert is {mean_return}')
+    # mean_return = total_return / num_episodes
+    print(f'Mean return of the expert is {np.mean(returns)}')
     print(f'Max episode steps is {np.max(num_steps)}')
     print(f'Min episode steps is {np.min(num_steps)}')
-    return buffer, mean_return
+
+    return buffer, np.mean(returns)
 
 
 def build_mlp(input_dim, output_dim, hidden_units=(64, 64),

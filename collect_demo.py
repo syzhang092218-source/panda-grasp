@@ -3,7 +3,7 @@ import argparse
 import os
 
 from panda_grasp.utils.utils import collect_demo
-from panda_grasp import ENV, POLICY
+from panda_grasp import ENV, POLICY, POLICY_PARAMS
 
 
 def main(args):
@@ -13,6 +13,7 @@ def main(args):
     buffer, mean_return = collect_demo(
         env=env,
         policy=POLICY[args.env_id][args.policy],
+        params=POLICY_PARAMS[args.env_id],
         buffer_size=args.buffer_size,
         device=device,
         std=args.std,
@@ -28,9 +29,9 @@ def main(args):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('--env-id', type=str, default='PandaAvoidObstacle-v0')
-    p.add_argument('--buffer-size', type=int, default=40000)
-    p.add_argument('--policy', type=str, default='expert')
+    p.add_argument('--env-id', type=str, default='PandaAvoidObstacleRandom-v0')
+    p.add_argument('--buffer-size', type=int, default=200000)
+    p.add_argument('--policy', type=str, default='base')
     p.add_argument('--std', type=float, default=0.05)
     p.add_argument('--continuous', action='store_true', default=False,
                    help='if True, collect continuous suboptimal trajectories')

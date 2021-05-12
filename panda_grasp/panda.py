@@ -61,6 +61,17 @@ class Panda:
             init_pos[i] = obs_state[i]
         self._reset_robot(init_pos)
 
+    def reset_with_ee_pos(self, ee_position, grasp_open=True):
+        self._reset_robot(self.init_pos)
+        quaternion = [np.sqrt(2) / 2, -np.sqrt(2) / 2, 0., 0.]
+        desired = {'ee_position': np.asarray(ee_position), 'ee_quaternion': np.asarray(quaternion)}
+        joint_position = self._inverse_kinematics(desired['ee_position'], desired['ee_quaternion'])
+        self._reset_robot(joint_position)
+        gripper_position = [0.03, 0.03]  # to work with ycb_object: zsy_long_box
+        if grasp_open:
+            gripper_position = [0.05, 0.05]
+        p.setJointMotorControlArray(self.panda, [9, 10], p.POSITION_CONTROL, targetPositions=gripper_position)
+
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
