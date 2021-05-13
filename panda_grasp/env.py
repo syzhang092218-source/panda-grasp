@@ -455,8 +455,8 @@ class PandaAvoidObstacleEnv(PandaRawEnv):
             done = True
 
         # judge if the object has been moved to the target
-        if abs(obj_position[0] - self.target_location[0]) < self.target_width / 2 - 0.02\
-                and abs(obj_position[1] - self.target_location[1]) < self.target_width / 2 - 0.02\
+        if abs(obj_position[0] - self.target_location[0]) < self.target_width / 2 - 0.02 \
+                and abs(obj_position[1] - self.target_location[1]) < self.target_width / 2 - 0.02 \
                 and obj_position[2] < self.target_height + self.obj_height / 2 + 0.1:
             reward += 5000
             done = True
@@ -591,10 +591,10 @@ class PandaAvoidObstacleRandomEnv(PandaRawEnv):
         )
 
         # observation space is
-        # [ee_position*3, target_location*3]
+        # [ee_position*3, obj_location*3, target_location*3]
         self.observation_space = spaces.Box(
-            low=np.array([-np.inf] * 6),
-            high=np.array([np.inf] * 6),
+            low=np.array([-np.inf] * 9),
+            high=np.array([np.inf] * 9),
             dtype=np.float32
         )
 
@@ -639,13 +639,13 @@ class PandaAvoidObstacleRandomEnv(PandaRawEnv):
             [self.panda.state['ee_position'],
              # np.array([self.obj_height]),
              # np.array([self.obj_width]),
-             # self.obstacle.get_position(),
+             self.obstacle.get_position(),
              # np.array([self.obstacle_height]),
              # np.array([self.obstacle_width]),
              self.target.get_position(),
              # np.array([self.target_height]),
              # np.array([self.target_width])]
-            ]
+             ]
         )
         return return_state
 
@@ -748,7 +748,7 @@ class PandaAvoidObstacleRandomEnv(PandaRawEnv):
         action = dpos
 
         # action in this example is the end-effector velocity
-        self.panda.step(dposition=dpos, dquaternion=dquat, grasp_open=not self.grasp)
+        self.panda.step(dposition=dpos, dquaternion=dquat, grasp_open=False)
 
         # take simulation step
         p.stepSimulation()

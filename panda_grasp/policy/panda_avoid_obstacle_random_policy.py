@@ -3,9 +3,11 @@ import numpy as np
 
 def recover_state(state):
     ee_position = state[0:3]
-    target_location = state[3:6]
+    obj_location = state[3:6]
+    target_location = state[6:9]
     return {
         'ee_position': ee_position,
+        'obj_location': obj_location,
         'target_location': target_location,
     }
 
