@@ -591,10 +591,11 @@ class PandaAvoidObstacleRandomEnv(PandaRawEnv):
         )
 
         # observation space is
-        # [ee_position*3, obj_location*3, target_location*3]
+        # [ee_position*3, joint_position*7, joint_velocity*7, joint_torque*7,
+        # obj_location*3, obstacle_location*3, target_location*3]
         self.observation_space = spaces.Box(
-            low=np.array([-np.inf] * 9),
-            high=np.array([np.inf] * 9),
+            low=np.array([-np.inf] * 33),
+            high=np.array([np.inf] * 33),
             dtype=np.float32
         )
 
@@ -637,14 +638,16 @@ class PandaAvoidObstacleRandomEnv(PandaRawEnv):
     def return_state(self):
         return_state = np.concatenate(
             [self.panda.state['ee_position'],
+             self.panda.state['joint_position'][0:7],
+             self.panda.state['joint_velocity'][0:7],
+             self.panda.state['joint_torque'][0:7],
+             self.obj.get_position(),
              # np.array([self.obj_height]),
              # np.array([self.obj_width]),
              self.obstacle.get_position(),
              # np.array([self.obstacle_height]),
              # np.array([self.obstacle_width]),
              self.target.get_position(),
-             # np.array([self.target_height]),
-             # np.array([self.target_width])]
              ]
         )
         return return_state

@@ -6,7 +6,7 @@ from .buffer import Buffer
 from tqdm import tqdm
 
 
-def collect_demo(env, policy, params, buffer_size, device, std, continuous, seed=0):
+def collect_demo(env, policy, params, buffer_size, device, std, continuous, seed=0, after_done=100):
     env.seed(seed)
     np.random.seed(seed)
 
@@ -38,14 +38,22 @@ def collect_demo(env, policy, params, buffer_size, device, std, continuous, seed
         else:
             action = policy(state, env, std)
         next_state, reward, done, _ = env.step(action)
-        mask = True if t == env.max_episode_steps else done
+        # mask = True if t == env.max_episode_steps else done
+        mask = False
         buffer.append(state, action, reward, mask, next_state)
         episode_return += reward
         episode_steps += 1
         state = next_state
 
         if done or t == env.max_episode_steps:
-            # print(f'init_vy: {init_vy}, init_vz: {init_vz}')
+
+            # run some steps before ending
+            for after_step in range(after_done):
+                next_state, reward, done, _ = env.step(action)
+                mask = (after_step == (after_done - 1))
+                buffer.append(state, action, reward, mask, next_state)
+                i_step += 1
+
             tqdm.write(f'Reward: {episode_return}')
             if continuous:
                 init_vy = params['default_init_vy'] + \
