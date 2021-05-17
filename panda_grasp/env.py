@@ -674,12 +674,12 @@ class PandaAvoidObstacleRandomEnv(PandaRawEnv):
 
         # punish the energy cost
         dist = np.linalg.norm(self.obj_location - self.target_location)
-        reward -= np.linalg.norm(action) * 2 / (dist ** 2)
+        reward -= np.linalg.norm(action) * 0.02 / (dist ** 2)
 
         # punish the distance between the object and the target
         target_position = self.target_location + np.asarray([0, 0, self.obj_height / 2 + self.target_height])
         dist_obj_tar = np.linalg.norm(obj_position - target_position)
-        reward -= dist_obj_tar * 5
+        reward -= dist_obj_tar * 0.05
 
         # judge if the object is dropped
         if np.linalg.norm(state['ee_position'] - obj_position - np.asarray([0, 0, self.obj_height / 2])) > 0.1:
@@ -700,7 +700,7 @@ class PandaAvoidObstacleRandomEnv(PandaRawEnv):
         if abs(obj_position[0] - self.target_location[0]) < self.target_width / 2 - 0.02 \
                 and abs(obj_position[1] - self.target_location[1]) < self.target_width / 2 - 0.02 \
                 and obj_position[2] < self.target_height + self.obj_height / 2 + 0.1:
-            reward += 5000
+            # reward += 5000
             done = True
 
         return reward, done
